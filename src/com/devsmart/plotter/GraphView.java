@@ -4,6 +4,7 @@ import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -13,6 +14,8 @@ import android.graphics.Matrix.ScaleToFit;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.v4.view.MotionEventCompat;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
@@ -25,6 +28,13 @@ import android.view.View;
 import com.devsmart.BackgroundTask;
 
 public abstract class GraphView extends View {
+
+	public static enum Axis {
+		X,
+		Y
+	}
+
+	private static final String KEY_VIEWPORT = "viewport";
 
 	private ExecutorService mDrawThread = Executors.newSingleThreadExecutor();
 
@@ -44,6 +54,7 @@ public abstract class GraphView extends View {
 	protected int mAxisColor;
 	protected Paint mAxisLabelPaint = new Paint();
 	protected Rect mPlotMargins = new Rect();
+	protected AxisLabelRenderer mAxisLabelRenderer;
 	protected int mBackgroundColor;
 	protected float mXAxisDevision;
 	protected float mYAxisDevision;
@@ -74,8 +85,40 @@ public abstract class GraphView extends View {
 		mAxisColor = Color.DKGRAY;
 		mAxisLabelPaint.setColor(Color.DKGRAY);
 		mAxisLabelPaint.setTextSize(20.0f);
+		mAxisLabelPaint.setAntiAlias(true);
 		mBackgroundColor = Color.WHITE;
+		mAxisLabelRenderer = new AxisLabelRenderer() {
+			
+			@SuppressLint("DefaultLocale")
+			@Override
+			public String renderAxisLabel(Axis axis, float value) {
+				return String.format("%.3f", value);
+			}
+		};
 
+	}
+	
+	@Override
+	protected Parcelable onSaveInstanceState() {
+		Bundle retval = new Bundle();
+		
+		float[] viewportvalues = new float[4];
+		viewportvalues[0] = mViewPort.left;
+		viewportvalues[1] = mViewPort.top;
+		viewportvalues[2] = mViewPort.right;
+		viewportvalues[3] = mViewPort.bottom;
+		retval.putFloatArray(KEY_VIEWPORT, viewportvalues);
+		return retval;
+	}
+	
+	protected void onRestoreInstanceState (Parcelable state) {
+		Bundle bundle = (Bundle) state;
+		float[] viewportvalues = bundle.getFloatArray(KEY_VIEWPORT);
+		mViewPort.left = viewportvalues[0];
+		mViewPort.top = viewportvalues[1];
+		mViewPort.right = viewportvalues[2];
+		mViewPort.bottom = viewportvalues[3];
+		drawFrame(mViewPort);
 	}
 
 	public void addSeries(Series series) {
@@ -257,7 +300,7 @@ public abstract class GraphView extends View {
 			canvas.drawLines(points, axisPaint);
 
 			float xPoint = 	(float) (mXAxisDevision *  Math.floor(viewPort.left / mXAxisDevision));
-			while(xPoint < viewPort.right){
+			while(xPoint < viewPort.right+mXAxisDevision/2){
 				if(xPoint != 0.0f){
 					points[0] = xPoint;
 					points[1] = 0;
@@ -268,7 +311,7 @@ public abstract class GraphView extends View {
 					points[3] += TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8, metrics);
 					canvas.drawLines(points, axisPaint);
 
-					String label = String.valueOf(xPoint);
+					String label = mAxisLabelRenderer.renderAxisLabel(Axis.X, xPoint);
 					float textWidth = mAxisLabelPaint.measureText(label);
 					canvas.drawText(label,
 							points[0]-textWidth/2,
@@ -293,8 +336,8 @@ public abstract class GraphView extends View {
 			matrix.mapPoints(points);
 			canvas.drawLines(points, axisPaint);
 
-			float yPoint = 	(float) (mYAxisDevision *  Math.floor(viewPort.top / mXAxisDevision));
-			while(yPoint < viewPort.bottom){
+			float yPoint = 	(float) (mYAxisDevision *  Math.floor(viewPort.top / mYAxisDevision));
+			while(yPoint < viewPort.bottom+mYAxisDevision/2){
 				if(yPoint != 0.0f){
 					points[0] = 0;
 					points[1] = yPoint;
@@ -305,7 +348,7 @@ public abstract class GraphView extends View {
 					points[2] += TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8, metrics);
 					canvas.drawLines(points, axisPaint);
 
-					String label = String.valueOf(yPoint);
+					String label = mAxisLabelRenderer.renderAxisLabel(Axis.Y, yPoint);
 					mAxisLabelPaint.getTextBounds(label, 0, label.length(), bounds);
 					float textWidth = mAxisLabelPaint.measureText(label);
 					canvas.drawText(label,
@@ -313,7 +356,7 @@ public abstract class GraphView extends View {
 							points[1]+bounds.height()/2,
 							mAxisLabelPaint);
 				}
-				yPoint += mXAxisDevision;
+				yPoint += mYAxisDevision;
 			}
 
 		}
@@ -321,6 +364,23 @@ public abstract class GraphView extends View {
 
 
 
+	}
+	
+	public void autoScaleDomainAndRange() {
+		float[] point = new float[2];
+		RectF viewPort = new RectF();
+		viewPort.set(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY,
+				Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY);
+		for(Series series : mSeries){
+			for(int i=0;i<series.getLength();i++){
+				series.getPoint(i, point);
+				viewPort.left = Math.min(viewPort.left, point[0]);
+				viewPort.right = Math.max(viewPort.right, point[0]);
+				viewPort.top = Math.min(viewPort.top, point[1]);
+				viewPort.bottom = Math.max(viewPort.bottom, point[1]);
+			}
+		}
+		drawFrame(viewPort);
 	}
 
 
