@@ -1,9 +1,11 @@
 package com.devsmart.plotter;
 
+import java.util.Iterator;
+
+import android.graphics.RectF;
+
 
 public interface Series {
 
-	int getLength();
-	
-	void getPoint(int index, float[] point);
+	public Iterator<float[]> createIterator();
 }

@@ -1,5 +1,6 @@
 package com.devsmart.plotter;
 
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -24,6 +25,7 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
+import android.widget.ZoomButtonsController;
 
 import com.devsmart.BackgroundTask;
 
@@ -35,6 +37,7 @@ public abstract class GraphView extends View {
 	}
 
 	private static final String KEY_VIEWPORT = "viewport";
+	private static final String KEY_SUPERINSTANCE = "superinstance";
 
 	private ExecutorService mDrawThread = Executors.newSingleThreadExecutor();
 
@@ -58,6 +61,10 @@ public abstract class GraphView extends View {
 	protected int mBackgroundColor;
 	protected float mXAxisDevision;
 	protected float mYAxisDevision;
+	protected int mXAxisMargin;
+	protected int mYAxisMargin;
+
+	private ZoomButtonsController mZoomControls;
 
 	public GraphView(Context context) {
 		super(context);
@@ -81,14 +88,14 @@ public abstract class GraphView extends View {
 		mXAxisDevision = 1.0f;
 		mDrawYAxis = true;
 		mYAxisDevision = 1.0f;
-		mPlotMargins.set(10, 10, 10, 10);
+		mPlotMargins.set(20, 0, 0, 20);
 		mAxisColor = Color.DKGRAY;
 		mAxisLabelPaint.setColor(Color.DKGRAY);
-		mAxisLabelPaint.setTextSize(20.0f);
+		mAxisLabelPaint.setTextSize(15.0f);
 		mAxisLabelPaint.setAntiAlias(true);
 		mBackgroundColor = Color.WHITE;
 		mAxisLabelRenderer = new AxisLabelRenderer() {
-			
+
 			@SuppressLint("DefaultLocale")
 			@Override
 			public String renderAxisLabel(Axis axis, float value) {
@@ -96,12 +103,17 @@ public abstract class GraphView extends View {
 			}
 		};
 
+		mZoomControls = new ZoomButtonsController(this);
+		mZoomControls.setAutoDismissed(true);
+		mZoomControls.setOnZoomListener(mZoomButtonListener);
+
 	}
-	
+
 	@Override
 	protected Parcelable onSaveInstanceState() {
 		Bundle retval = new Bundle();
-		
+		retval.putParcelable(KEY_SUPERINSTANCE, super.onSaveInstanceState());
+
 		float[] viewportvalues = new float[4];
 		viewportvalues[0] = mViewPort.left;
 		viewportvalues[1] = mViewPort.top;
@@ -110,9 +122,11 @@ public abstract class GraphView extends View {
 		retval.putFloatArray(KEY_VIEWPORT, viewportvalues);
 		return retval;
 	}
-	
+
 	protected void onRestoreInstanceState (Parcelable state) {
 		Bundle bundle = (Bundle) state;
+		super.onRestoreInstanceState(bundle.getParcelable(KEY_SUPERINSTANCE));
+
 		float[] viewportvalues = bundle.getFloatArray(KEY_VIEWPORT);
 		mViewPort.left = viewportvalues[0];
 		mViewPort.top = viewportvalues[1];
@@ -132,17 +146,16 @@ public abstract class GraphView extends View {
 	}
 
 	protected Matrix getViewportToScreenMatrix(
-			final int canvasWidth, final int canvasHeight,
+			RectF screen,
 			RectF viewPort){
 
 		Matrix matrix = new Matrix();
 		matrix.setRectToRect(viewPort, 
-				//new RectF(mPlotMargins.left, mPlotMargins.top, canvasWidth-mPlotMargins.right, canvasHeight-mPlotMargins.bottom),
-				new RectF(0,0,canvasWidth,canvasHeight),
+				screen,
 				ScaleToFit.FILL);
 
 		matrix.postScale(1, -1);
-		matrix.postTranslate(0, canvasHeight);
+		matrix.postTranslate(0, screen.height());
 
 		return matrix;
 	}
@@ -155,6 +168,8 @@ public abstract class GraphView extends View {
 
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
+
+		mZoomControls.setVisible(true);
 
 		final int action = MotionEventCompat.getActionMasked(event);
 		switch(action){
@@ -180,7 +195,7 @@ public abstract class GraphView extends View {
 		RectF screen = new RectF(0,0, getMeasuredWidth(), getMeasuredHeight());
 		m.mapRect(screen);
 
-		Matrix viewPortTransform = getViewportToScreenMatrix(getMeasuredWidth(), getMeasuredHeight(), mViewPort);
+		Matrix viewPortTransform = getViewportToScreenMatrix(new RectF(0,0,getMeasuredWidth(), getMeasuredHeight()), mViewPort);
 		Matrix screenToViewPort = new Matrix();
 		viewPortTransform.invert(screenToViewPort);
 
@@ -193,6 +208,7 @@ public abstract class GraphView extends View {
 		if(mFrontBuffer != null){
 			canvas.drawBitmap(mFrontBuffer, mTransformMatrix, mDrawPaint);
 		}
+		drawAxis2(canvas, getDisplayViewPort());
 	}
 
 	protected abstract void drawGraph(Canvas canvas, RectF viewPort);
@@ -202,7 +218,7 @@ public abstract class GraphView extends View {
 		if(mBackgroundDrawTask != null){
 			mBackgroundDrawTask.mCanceled = true;
 		}
-		mBackgroundDrawTask = new BackgroundDrawTask(getMeasuredWidth(), getMeasuredHeight(), viewport);
+		mBackgroundDrawTask = new BackgroundDrawTask(getMeasuredWidth(), getMeasuredHeight(), new RectF(viewport));
 		BackgroundTask.runBackgroundTask(mBackgroundDrawTask, mDrawThread);
 	}
 
@@ -229,7 +245,7 @@ public abstract class GraphView extends View {
 		}
 
 		@Override
-		public void onFinished() {
+		public void onAfter() {
 			if(!mCanceled){
 				mFrontBuffer = mDrawBuffer;
 				mViewPort = viewport;
@@ -248,6 +264,16 @@ public abstract class GraphView extends View {
 		public boolean onDown(MotionEvent e) {
 			return true;
 		}
+
+
+
+		@Override
+		public boolean onDoubleTap(MotionEvent e) {
+			autoScaleDomainAndRange();
+			return true;
+		}
+
+
 
 		@Override
 		public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
@@ -273,18 +299,97 @@ public abstract class GraphView extends View {
 
 	};
 
-	protected void drawAxis(Canvas canvas, RectF viewPort) {
-
+	protected void drawAxis2(Canvas canvas, RectF viewPort) {
+		Rect bounds = new Rect();
 		DisplayMetrics metrics = getContext().getResources().getDisplayMetrics();
 		float[] points;
 
 		final int canvasWidth = canvas.getWidth();
 		final int canvasHeight = canvas.getHeight();
 
-		Matrix matrix = getViewportToScreenMatrix(canvasWidth, canvasHeight, viewPort); 
+		Paint axisPaint = new Paint();
+		axisPaint.setColor(mAxisColor);
+		axisPaint.setStrokeWidth(2);
 
-		//clear the canvas
-		canvas.drawColor(mBackgroundColor);
+		Matrix matrix = getViewportToScreenMatrix(new RectF(0,0,canvasWidth, canvasHeight), viewPort);
+
+		if(mDrawXAxis){
+			//draw X axis
+			points = new float[]{
+					0, canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom, metrics),
+					canvasWidth, canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom, metrics)
+			};
+			canvas.drawLines(points, axisPaint);
+
+			float xPoint = 	(float) (mXAxisDevision *  Math.floor(viewPort.left / mXAxisDevision));
+			while(xPoint < viewPort.right+mXAxisDevision/2){
+				points[0] = xPoint;
+				points[1] = 0;
+				points[2] = xPoint;
+				points[3] = 0;
+				matrix.mapPoints(points);
+				points[1] = canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom, metrics);
+				points[3] = canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom + 10, metrics);
+				canvas.drawLines(points, axisPaint);
+
+				String label = mAxisLabelRenderer.renderAxisLabel(Axis.X, xPoint);
+				mAxisLabelPaint.getTextBounds(label, 0, label.length(), bounds);
+
+				canvas.drawText(label,
+						points[0]-bounds.width()/2,
+						points[1] + bounds.height() + TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, metrics),
+						mAxisLabelPaint);
+
+				xPoint += mXAxisDevision;
+
+			}
+
+
+		}
+
+		if(mDrawYAxis){
+			//draw Y axis
+			points = new float[]{
+					TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left, metrics), viewPort.top,
+					TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left, metrics), viewPort.bottom
+			};
+			canvas.drawLines(points, axisPaint);
+
+			float yPoint = 	(float) (mYAxisDevision *  Math.floor(viewPort.top / mYAxisDevision));
+			while(yPoint < viewPort.bottom+mYAxisDevision/2){
+				points[0] = 0;
+				points[1] = yPoint;
+				points[2] = 0;
+				points[3] = yPoint;
+				matrix.mapPoints(points);
+				points[0] = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left, metrics);
+				points[2] = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left + 10, metrics);
+				canvas.drawLines(points, axisPaint);
+
+				String label = mAxisLabelRenderer.renderAxisLabel(Axis.Y, yPoint);
+				mAxisLabelPaint.getTextBounds(label, 0, label.length(), bounds);
+				canvas.drawText(label,
+						points[0]-bounds.width()-TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, metrics),
+						points[1]+bounds.height()/2,
+						mAxisLabelPaint);
+
+				yPoint += mYAxisDevision;
+			}
+
+		}
+
+	}
+
+	protected void drawAxis(Canvas canvas, RectF viewPort) {
+
+		Rect bounds = new Rect();
+		DisplayMetrics metrics = getContext().getResources().getDisplayMetrics();
+		float[] points;
+
+		final int canvasWidth = canvas.getWidth();
+		final int canvasHeight = canvas.getHeight();
+
+		Matrix matrix = getViewportToScreenMatrix(new RectF(0,0,canvasWidth, canvasHeight), viewPort); 
 
 		Paint axisPaint = new Paint();
 		axisPaint.setColor(mAxisColor);
@@ -312,10 +417,11 @@ public abstract class GraphView extends View {
 					canvas.drawLines(points, axisPaint);
 
 					String label = mAxisLabelRenderer.renderAxisLabel(Axis.X, xPoint);
-					float textWidth = mAxisLabelPaint.measureText(label);
+					mAxisLabelPaint.getTextBounds(label, 0, label.length(), bounds);
+
 					canvas.drawText(label,
-							points[0]-textWidth/2,
-							points[1] - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, metrics),
+							points[0]-bounds.width()/2,
+							points[1] + bounds.height() + TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 15, metrics),
 							mAxisLabelPaint);
 
 				}
@@ -326,7 +432,7 @@ public abstract class GraphView extends View {
 
 		}
 
-		Rect bounds = new Rect();
+
 		if(mDrawYAxis){
 			//draw Y axis
 			points = new float[]{
@@ -365,23 +471,92 @@ public abstract class GraphView extends View {
 
 
 	}
-	
+
 	public void autoScaleDomainAndRange() {
-		float[] point = new float[2];
-		RectF viewPort = new RectF();
-		viewPort.set(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY,
+
+		/*
+		mViewPort.set(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY,
 				Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY);
 		for(Series series : mSeries){
-			for(int i=0;i<series.getLength();i++){
-				series.getPoint(i, point);
-				viewPort.left = Math.min(viewPort.left, point[0]);
-				viewPort.right = Math.max(viewPort.right, point[0]);
-				viewPort.top = Math.min(viewPort.top, point[1]);
-				viewPort.bottom = Math.max(viewPort.bottom, point[1]);
+			Iterator<float[]> it = series.createIterator();
+			while(it.hasNext()){
+				float[] point = it.next();
+				mViewPort.left = Math.min(mViewPort.left, point[0]);
+				mViewPort.right = Math.max(mViewPort.right, point[0]);
+				mViewPort.top = Math.min(mViewPort.top, point[1]);
+				mViewPort.bottom = Math.max(mViewPort.bottom, point[1]);
 			}
 		}
-		drawFrame(viewPort);
+		drawFrame(mViewPort);
+		 */
+
+
+		BackgroundTask.runBackgroundTask(new BackgroundTask() {
+
+			RectF viewport = new RectF();
+
+			@Override
+			public void onBackground() {
+				viewport.set(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY,
+						Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY);
+				for(Series series : mSeries){
+					Iterator<float[]> it = series.createIterator();
+					while(it.hasNext()){
+						float[] point = it.next();
+						viewport.left = Math.min(viewport.left, point[0]);
+						viewport.right = Math.max(viewport.right, point[0]);
+						viewport.top = Math.min(viewport.top, point[1]);
+						viewport.bottom = Math.max(viewport.bottom, point[1]);
+					}
+				}
+				
+				RectF screen = new RectF(mPlotMargins.left, mPlotMargins.top, getMeasuredWidth()-mPlotMargins.width(),getMeasuredHeight()-mPlotMargins.height());
+				Matrix matrix = new Matrix();
+				getViewportToScreenMatrix(screen, viewport).invert(matrix);
+				matrix.mapRect(viewport, new RectF(0,0,getMeasuredWidth(), getMeasuredHeight()));
+				
+
+			}
+
+			@Override
+			public void onAfter() {
+				drawFrame(viewport);
+			}
+
+		}, mDrawThread);
+
 	}
+
+	public void zoomInCenter() {
+		float scale = 1.3f;
+		mTransformMatrix.postScale(scale, scale, getMeasuredWidth()/2, getMeasuredHeight()/2);
+		invalidate();
+		updateViewport();
+	}
+
+	public void zoomOutCenter() {
+		float scale = 0.7f;
+		mTransformMatrix.postScale(scale, scale, getMeasuredWidth()/2, getMeasuredHeight()/2);
+		invalidate();
+		updateViewport();
+	}
+
+	private ZoomButtonsController.OnZoomListener mZoomButtonListener = new ZoomButtonsController.OnZoomListener(){
+
+		@Override
+		public void onVisibilityChanged(boolean visible) {}
+
+		@Override
+		public void onZoom(boolean zoomIn) {
+			if(zoomIn) {
+				zoomInCenter();
+			} else {
+				zoomOutCenter();
+			}
+
+		}
+
+	};
 
 
 
