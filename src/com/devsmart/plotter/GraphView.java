@@ -59,8 +59,8 @@ public abstract class GraphView extends View {
 	protected Rect mPlotMargins = new Rect();
 	protected AxisLabelRenderer mAxisLabelRenderer;
 	protected int mBackgroundColor;
-	protected float mXAxisDevision;
-	protected float mYAxisDevision;
+	public float mXAxisDevision;
+	public float mYAxisDevision;
 	protected int mXAxisMargin;
 	protected int mYAxisMargin;
 
@@ -99,7 +99,8 @@ public abstract class GraphView extends View {
 			@SuppressLint("DefaultLocale")
 			@Override
 			public String renderAxisLabel(Axis axis, float value) {
-				return String.format("%.3f", value);
+				return String.valueOf(roundToSignificantFigures(value, 4));
+				//return String.format("%.3f", value);
 			}
 		};
 
@@ -108,9 +109,19 @@ public abstract class GraphView extends View {
 		mZoomControls.setOnZoomListener(mZoomButtonListener);
 
 	}
+	
+	public void exiting() {
+		mZoomControls.setVisible(false);
+		mZoomControls.setAutoDismissed(false);
+		mZoomControls.setOnZoomListener(null);
+	}
 
 	@Override
 	protected Parcelable onSaveInstanceState() {
+		
+		exiting();
+		
+		
 		Bundle retval = new Bundle();
 		retval.putParcelable(KEY_SUPERINSTANCE, super.onSaveInstanceState());
 
@@ -208,7 +219,7 @@ public abstract class GraphView extends View {
 		if(mFrontBuffer != null){
 			canvas.drawBitmap(mFrontBuffer, mTransformMatrix, mDrawPaint);
 		}
-		drawAxis2(canvas, getDisplayViewPort());
+		drawAxis3(canvas, getDisplayViewPort());
 	}
 
 	protected abstract void drawGraph(Canvas canvas, RectF viewPort);
@@ -252,6 +263,9 @@ public abstract class GraphView extends View {
 				mTransformMatrix.reset();
 				invalidate();
 				//mBackgroundDrawTask = null;
+			} else if(mDrawBuffer != null) {
+				mDrawBuffer.recycle();
+				mDrawBuffer = null;
 			}
 		}
 
@@ -269,7 +283,10 @@ public abstract class GraphView extends View {
 
 		@Override
 		public boolean onDoubleTap(MotionEvent e) {
-			autoScaleDomainAndRange();
+			//autoScaleDomainAndRange();
+			mTransformMatrix.postScale(1.3f, 1.3f, e.getX(), e.getY());
+			invalidate();
+			updateViewport();
 			return true;
 		}
 
@@ -298,6 +315,72 @@ public abstract class GraphView extends View {
 		}
 
 	};
+	
+	public static double roundToSignificantFigures(double num, int n) {
+	    if(num == 0) {
+	        return 0;
+	    }
+
+	    final double d = Math.ceil(Math.log10(num < 0 ? -num: num));
+	    final int power = n - (int) d;
+
+	    final double magnitude = Math.pow(10, power);
+	    final long shifted = Math.round(num*magnitude);
+	    return shifted/magnitude;
+	}
+	
+	protected void drawAxis3(Canvas canvas, RectF viewPort) {
+		
+		final int NUM_DIVISIONS = 5;
+		
+		Rect bounds = new Rect();
+		DisplayMetrics metrics = getContext().getResources().getDisplayMetrics();
+		float[] points;
+
+		final int canvasWidth = canvas.getWidth();
+		final int canvasHeight = canvas.getHeight();
+
+		Paint axisPaint = new Paint();
+		axisPaint.setColor(mAxisColor);
+		axisPaint.setStrokeWidth(2);
+
+		Matrix matrix = getViewportToScreenMatrix(new RectF(0,0,canvasWidth, canvasHeight), viewPort);
+		
+		if(mDrawXAxis) {
+			//draw X axis
+			points = new float[]{
+					0, canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom, metrics),
+					canvasWidth, canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom, metrics)
+			};
+			canvas.drawLines(points, axisPaint);
+			
+			final float dist = viewPort.width() / NUM_DIVISIONS;
+			float xPoint = (float) (dist * Math.floor(viewPort.left / dist));
+			while(xPoint < viewPort.right+dist){
+				points[0] = xPoint;
+				points[1] = 0;
+				points[2] = xPoint;
+				points[3] = 0;
+				matrix.mapPoints(points);
+				points[1] = canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom, metrics);
+				points[3] = canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom + 10, metrics);
+				canvas.drawLines(points, axisPaint);
+
+				String label = mAxisLabelRenderer.renderAxisLabel(Axis.X, xPoint);
+				mAxisLabelPaint.getTextBounds(label, 0, label.length(), bounds);
+
+				canvas.drawText(label,
+						points[0]-bounds.width()/2,
+						points[1] + bounds.height() + TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, metrics),
+						mAxisLabelPaint);
+
+				xPoint += dist;
+
+			}
+			
+			
+		}
+	}
 
 	protected void drawAxis2(Canvas canvas, RectF viewPort) {
 		Rect bounds = new Rect();
@@ -350,8 +433,8 @@ public abstract class GraphView extends View {
 		if(mDrawYAxis){
 			//draw Y axis
 			points = new float[]{
-					TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left, metrics), viewPort.top,
-					TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left, metrics), viewPort.bottom
+					TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left, metrics), 0,
+					TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left, metrics), canvasHeight
 			};
 			canvas.drawLines(points, axisPaint);
 
@@ -510,7 +593,7 @@ public abstract class GraphView extends View {
 					}
 				}
 				
-				RectF screen = new RectF(mPlotMargins.left, mPlotMargins.top, getMeasuredWidth()-mPlotMargins.width(),getMeasuredHeight()-mPlotMargins.height());
+				RectF screen = new RectF(mPlotMargins.left, mPlotMargins.top, getMeasuredWidth(),getMeasuredHeight()-mPlotMargins.height());
 				Matrix matrix = new Matrix();
 				getViewportToScreenMatrix(screen, viewport).invert(matrix);
 				matrix.mapRect(viewport, new RectF(0,0,getMeasuredWidth(), getMeasuredHeight()));

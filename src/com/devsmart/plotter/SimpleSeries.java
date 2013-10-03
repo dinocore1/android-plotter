@@ -7,7 +7,7 @@ import android.graphics.RectF;
 
 public class SimpleSeries implements Series {
 	
-	protected ArrayList<float[]> mData = new ArrayList<float[]>();
+	public ArrayList<float[]> mData = new ArrayList<float[]>();
 
 	@Override
 	public Iterator<float[]> createIterator() {
