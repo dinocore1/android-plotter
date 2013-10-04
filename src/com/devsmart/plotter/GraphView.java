@@ -377,8 +377,38 @@ public abstract class GraphView extends View {
 				xPoint += dist;
 
 			}
-			
-			
+		}
+		
+		if(mDrawYAxis){
+			//draw Y axis
+			points = new float[]{
+					TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left, metrics), 0,
+					TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left, metrics), canvasHeight
+			};
+			canvas.drawLines(points, axisPaint);
+
+			final float dist = viewPort.height() / NUM_DIVISIONS;
+			float yPoint = 	(float) (dist *  Math.floor(viewPort.top / dist));
+			while(yPoint < viewPort.bottom+dist){
+				points[0] = 0;
+				points[1] = yPoint;
+				points[2] = 0;
+				points[3] = yPoint;
+				matrix.mapPoints(points);
+				points[0] = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left, metrics);
+				points[2] = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left + 10, metrics);
+				canvas.drawLines(points, axisPaint);
+
+				String label = mAxisLabelRenderer.renderAxisLabel(Axis.Y, yPoint);
+				mAxisLabelPaint.getTextBounds(label, 0, label.length(), bounds);
+				canvas.drawText(label,
+						points[0]-bounds.width()-TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, metrics),
+						points[1]+bounds.height()/2,
+						mAxisLabelPaint);
+
+				yPoint += dist;
+			}
+
 		}
 	}
 
