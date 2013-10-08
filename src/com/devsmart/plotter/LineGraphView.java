@@ -1,7 +1,5 @@
 package com.devsmart.plotter;
 
-import java.util.Iterator;
-
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -9,6 +7,8 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.util.AttributeSet;
+
+import com.devsmart.PeekableIterator;
 
 public class LineGraphView extends GraphView {
 
@@ -41,63 +41,99 @@ public class LineGraphView extends GraphView {
 		RectF pixel = new RectF();
 
 		RectF pixelBin = new RectF();
-		float xBinWidth = viewPort.width()/canvas.getWidth();
+		final float xBinWidth = viewPort.width()/canvas.getWidth();
 		pixelBin.left = viewPort.left-xBinWidth;
-		pixelBin.right = pixelBin.left;
+		pixelBin.right = viewPort.left;
 		pixelBin.bottom = Float.POSITIVE_INFINITY;
 		pixelBin.top = Float.NEGATIVE_INFINITY;
 
 		float[] lastpoint = new float[]{Float.NaN, Float.NaN};
 		for(Series series : mSeries){
-			Iterator<float[]> it = series.createIterator();
+			PeekableIterator<float[]> it = new PeekableIterator<float[]>(series.createIterator());
 			
+			
+			//findPixelBinLessThan(pixelBin, it);
 			while(it.hasNext()){
 				float[] point = it.next();
-				
-				if(point[0] < viewPort.left - xBinWidth) {
-					continue;
-				}
-				
-				if(point[0] > viewPort.right + 2*xBinWidth){
+				lastpoint[0] = point[0];
+				lastpoint[1] = point[1];
+				if(it.peek()[0] > viewPort.left){
 					break;
 				}
-
-				while(point[0] >= pixelBin.right){
-
-					if(pixelBin.bottom != Float.POSITIVE_INFINITY){
-						//draw pixel
-						matrix.mapRect(pixel, pixelBin);
-						
-						
-						canvas.drawLine(lastpoint[0], lastpoint[1], pixel.left, pixel.top, mPointPaint);
-						
-						lastpoint[0] = pixel.left;
-						lastpoint[1] = pixel.top;
+			}
+			matrix.mapPoints(lastpoint);
+			
+			boolean findOneMore = false;
+			while(it.hasNext()){
+				pixelBin.offset(xBinWidth, 0);
+				pixelBin.bottom = Float.POSITIVE_INFINITY;
+				pixelBin.top = Float.NEGATIVE_INFINITY;
+				
+				if(fillPixelBin(pixelBin, it)){
+					//draw pixel
+					matrix.mapRect(pixel, pixelBin);
+					canvas.drawLine(lastpoint[0], lastpoint[1], pixel.left, pixel.top, mPointPaint);
+					lastpoint[0] = pixel.left;
+					lastpoint[1] = pixel.top;
+					if(findOneMore) {
+						break;
 					}
-
-					pixelBin.offset(xBinWidth, 0);
-					pixelBin.bottom = Float.POSITIVE_INFINITY;
-					pixelBin.top = Float.NEGATIVE_INFINITY;
+				}
+				if(it.peek()[0] > viewPort.right){
+					findOneMore = true;
 				}
 				
-				pixelBin.bottom = Math.min(pixelBin.bottom, point[1]);
-				pixelBin.top = Math.max(pixelBin.top, point[1]);
 			}
 		}
 
-		//draw pixel
-		matrix.mapRect(pixel, pixelBin);
-		canvas.drawRect(pixel, mPointPaint);
-
 	}
-
-
-	private void drawPointData(float[] point, Canvas canvas) {
-		canvas.drawPoints(point, mPointPaint);
-
+	
+	private boolean findPixelBinLessThan(RectF pixelBin, PeekableIterator<float[]> it) {
+		boolean retval = false;
+		float[] point;
+		
+		while(it.hasNext()){
+			
+			point = it.next();
+			pixelBin.bottom = Math.min(pixelBin.bottom, point[1]);
+			pixelBin.top = Math.max(pixelBin.top, point[1]);
+			
+			point = it.peek();
+			
+			if(point[0] >= pixelBin.right){
+				break;
+			}
+			
+			if(point[0] >= pixelBin.left && point[0] < pixelBin.right){
+				pixelBin.bottom = Float.POSITIVE_INFINITY;
+				pixelBin.top = Float.NEGATIVE_INFINITY;
+			}
+			
+			
+			retval = true;
+		}
+		
+		return retval;
 	}
-
-
+	
+	private boolean fillPixelBin(RectF pixelBin, PeekableIterator<float[]> it) {
+		boolean retval = false;
+		float[] point;
+		while(it.hasNext()){
+			point = it.peek();
+			if(point[0] > pixelBin.right) {
+				break;
+			}
+			
+			if(point[0] >= pixelBin.left) {
+				pixelBin.bottom = Math.min(pixelBin.bottom, point[1]);
+				pixelBin.top = Math.max(pixelBin.top, point[1]);
+				retval = true;
+			}
+			it.next();
+		}
+		return retval;
+	}
 
 
 }

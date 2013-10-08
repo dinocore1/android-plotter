@@ -49,7 +49,7 @@ public abstract class GraphView extends View {
 	private Paint mDrawPaint = new Paint();
 	private BackgroundDrawTask mBackgroundDrawTask;
 	private GestureDetector mPanGestureDetector;
-	private ScaleGestureDetector mScaleGestureDetector;
+	private XYScaleGestureDetector mScaleGestureDetector;
 
 	//draw prefs
 	protected boolean mDrawXAxis;
@@ -78,7 +78,7 @@ public abstract class GraphView extends View {
 
 	private void init() {
 		mPanGestureDetector = new GestureDetector(mSimpleGestureListener);
-		mScaleGestureDetector = new ScaleGestureDetector(getContext(), mSimpleScaleGestureListener);
+		mScaleGestureDetector = new XYScaleGestureDetector(getContext(), mSimpleScaleGestureListener);
 		mDrawPaint.setFilterBitmap(true);
 		mViewPort.set(-1, -1, 1, 1);
 		mTransformMatrix.reset();
@@ -302,12 +302,13 @@ public abstract class GraphView extends View {
 
 	};
 
-	private ScaleGestureDetector.SimpleOnScaleGestureListener mSimpleScaleGestureListener = new ScaleGestureDetector.SimpleOnScaleGestureListener(){
+	private XYScaleGestureDetector.SimpleOnScaleGestureListener mSimpleScaleGestureListener = new XYScaleGestureDetector.SimpleOnScaleGestureListener(){
 
 		@Override
-		public boolean onScale(ScaleGestureDetector detector) {
-			float scale = detector.getScaleFactor();
-			mTransformMatrix.postScale(scale, scale, detector.getFocusX(), detector.getFocusY());
+		public boolean onScale(XYScaleGestureDetector detector) {
+			//float scale = detector.getScaleFactor();
+			
+			mTransformMatrix.postScale(detector.getXScaleFactor(), detector.getYScaleFactor(), detector.getFocusX(), detector.getFocusY());
 			invalidate();
 			updateViewport();
 			return true;
