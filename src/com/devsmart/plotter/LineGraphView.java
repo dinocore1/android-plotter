@@ -33,8 +33,6 @@ public class LineGraphView extends GraphView {
 
 		//clear the canvas
 		canvas.drawColor(mBackgroundColor);
-		
-		//drawAxis(canvas, viewPort);
 
 		Matrix matrix = getViewportToScreenMatrix(new RectF(0,0,canvas.getWidth(), canvas.getHeight()), viewPort); 
 

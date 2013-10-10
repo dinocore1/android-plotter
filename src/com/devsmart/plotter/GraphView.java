@@ -5,7 +5,6 @@ import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -23,7 +22,6 @@ import android.util.DisplayMetrics;
 import android.util.TypedValue;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
-import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.widget.ZoomButtonsController;
 
@@ -57,12 +55,13 @@ public abstract class GraphView extends View {
 	protected int mAxisColor;
 	protected Paint mAxisLabelPaint = new Paint();
 	protected Rect mPlotMargins = new Rect();
-	protected AxisLabelRenderer mAxisLabelRenderer;
 	protected int mBackgroundColor;
 	public float mXAxisDevision;
 	public float mYAxisDevision;
 	protected int mXAxisMargin;
 	protected int mYAxisMargin;
+	
+	protected AxisRenderer mAxisRenderer = new SimpleAxisRenderer();
 
 	private ZoomButtonsController mZoomControls;
 
@@ -94,15 +93,6 @@ public abstract class GraphView extends View {
 		mAxisLabelPaint.setTextSize(15.0f);
 		mAxisLabelPaint.setAntiAlias(true);
 		mBackgroundColor = Color.WHITE;
-		mAxisLabelRenderer = new AxisLabelRenderer() {
-
-			@SuppressLint("DefaultLocale")
-			@Override
-			public String renderAxisLabel(Axis axis, float value) {
-				return String.valueOf(roundToSignificantFigures(value, 4));
-				//return String.format("%.3f", value);
-			}
-		};
 
 		mZoomControls = new ZoomButtonsController(this);
 		mZoomControls.setAutoDismissed(true);
@@ -156,7 +146,7 @@ public abstract class GraphView extends View {
 		drawFrame(mViewPort);
 	}
 
-	protected Matrix getViewportToScreenMatrix(
+	public Matrix getViewportToScreenMatrix(
 			RectF screen,
 			RectF viewPort){
 
@@ -203,10 +193,10 @@ public abstract class GraphView extends View {
 		Matrix m = new Matrix();
 		mTransformMatrix.invert(m);
 
-		RectF screen = new RectF(0,0, getMeasuredWidth(), getMeasuredHeight());
+		RectF screen = new RectF(0,0, getWidth(), getHeight());
 		m.mapRect(screen);
 
-		Matrix viewPortTransform = getViewportToScreenMatrix(new RectF(0,0,getMeasuredWidth(), getMeasuredHeight()), mViewPort);
+		Matrix viewPortTransform = getViewportToScreenMatrix(new RectF(0,0,getWidth(), getHeight()), mViewPort);
 		Matrix screenToViewPort = new Matrix();
 		viewPortTransform.invert(screenToViewPort);
 
@@ -219,7 +209,7 @@ public abstract class GraphView extends View {
 		if(mFrontBuffer != null){
 			canvas.drawBitmap(mFrontBuffer, mTransformMatrix, mDrawPaint);
 		}
-		drawAxis3(canvas, getDisplayViewPort());
+		mAxisRenderer.drawAxis(canvas, mViewPort, this);
 	}
 
 	protected abstract void drawGraph(Canvas canvas, RectF viewPort);
@@ -330,89 +320,6 @@ public abstract class GraphView extends View {
 	    return shifted/magnitude;
 	}
 	
-	protected void drawAxis3(Canvas canvas, RectF viewPort) {
-		
-		final int NUM_DIVISIONS = 5;
-		
-		Rect bounds = new Rect();
-		DisplayMetrics metrics = getContext().getResources().getDisplayMetrics();
-		float[] points;
-
-		final int canvasWidth = canvas.getWidth();
-		final int canvasHeight = canvas.getHeight();
-
-		Paint axisPaint = new Paint();
-		axisPaint.setColor(mAxisColor);
-		axisPaint.setStrokeWidth(2);
-
-		Matrix matrix = getViewportToScreenMatrix(new RectF(0,0,canvasWidth, canvasHeight), viewPort);
-		
-		if(mDrawXAxis) {
-			//draw X axis
-			points = new float[]{
-					0, canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom, metrics),
-					canvasWidth, canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom, metrics)
-			};
-			canvas.drawLines(points, axisPaint);
-			
-			final float dist = viewPort.width() / NUM_DIVISIONS;
-			float xPoint = (float) (dist * Math.floor(viewPort.left / dist));
-			while(xPoint < viewPort.right+dist){
-				points[0] = xPoint;
-				points[1] = 0;
-				points[2] = xPoint;
-				points[3] = 0;
-				matrix.mapPoints(points);
-				points[1] = canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom, metrics);
-				points[3] = canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom + 10, metrics);
-				canvas.drawLines(points, axisPaint);
-
-				String label = mAxisLabelRenderer.renderAxisLabel(Axis.X, xPoint);
-				mAxisLabelPaint.getTextBounds(label, 0, label.length(), bounds);
-
-				canvas.drawText(label,
-						points[0]-bounds.width()/2,
-						points[1] + bounds.height() + TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, metrics),
-						mAxisLabelPaint);
-
-				xPoint += dist;
-
-			}
-		}
-		
-		if(mDrawYAxis){
-			//draw Y axis
-			points = new float[]{
-					TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left, metrics), 0,
-					TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left, metrics), canvasHeight
-			};
-			canvas.drawLines(points, axisPaint);
-
-			final float dist = viewPort.height() / NUM_DIVISIONS;
-			float yPoint = 	(float) (dist *  Math.floor(viewPort.top / dist));
-			while(yPoint < viewPort.bottom+dist){
-				points[0] = 0;
-				points[1] = yPoint;
-				points[2] = 0;
-				points[3] = yPoint;
-				matrix.mapPoints(points);
-				points[0] = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left, metrics);
-				points[2] = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left + 10, metrics);
-				canvas.drawLines(points, axisPaint);
-
-				String label = mAxisLabelRenderer.renderAxisLabel(Axis.Y, yPoint);
-				mAxisLabelPaint.getTextBounds(label, 0, label.length(), bounds);
-				canvas.drawText(label,
-						points[0]-bounds.width()-TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, metrics),
-						points[1]+bounds.height()/2,
-						mAxisLabelPaint);
-
-				yPoint += dist;
-			}
-
-		}
-	}
-
 	protected void drawAxis2(Canvas canvas, RectF viewPort) {
 		Rect bounds = new Rect();
 		DisplayMetrics metrics = getContext().getResources().getDisplayMetrics();
@@ -430,7 +337,7 @@ public abstract class GraphView extends View {
 		if(mDrawXAxis){
 			//draw X axis
 			points = new float[]{
-					0, canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom, metrics),
+					TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left, metrics), canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom, metrics),
 					canvasWidth, canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom, metrics)
 			};
 			canvas.drawLines(points, axisPaint);
@@ -446,7 +353,7 @@ public abstract class GraphView extends View {
 				points[3] = canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom + 10, metrics);
 				canvas.drawLines(points, axisPaint);
 
-				String label = mAxisLabelRenderer.renderAxisLabel(Axis.X, xPoint);
+				String label = String.valueOf(xPoint);
 				mAxisLabelPaint.getTextBounds(label, 0, label.length(), bounds);
 
 				canvas.drawText(label,
@@ -480,7 +387,7 @@ public abstract class GraphView extends View {
 				points[2] = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left + 10, metrics);
 				canvas.drawLines(points, axisPaint);
 
-				String label = mAxisLabelRenderer.renderAxisLabel(Axis.Y, yPoint);
+				String label = String.valueOf(yPoint);
 				mAxisLabelPaint.getTextBounds(label, 0, label.length(), bounds);
 				canvas.drawText(label,
 						points[0]-bounds.width()-TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, metrics),
@@ -530,7 +437,7 @@ public abstract class GraphView extends View {
 					points[3] += TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8, metrics);
 					canvas.drawLines(points, axisPaint);
 
-					String label = mAxisLabelRenderer.renderAxisLabel(Axis.X, xPoint);
+					String label = String.valueOf(xPoint);
 					mAxisLabelPaint.getTextBounds(label, 0, label.length(), bounds);
 
 					canvas.drawText(label,
@@ -568,7 +475,7 @@ public abstract class GraphView extends View {
 					points[2] += TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8, metrics);
 					canvas.drawLines(points, axisPaint);
 
-					String label = mAxisLabelRenderer.renderAxisLabel(Axis.Y, yPoint);
+					String label = String.valueOf(yPoint);
 					mAxisLabelPaint.getTextBounds(label, 0, label.length(), bounds);
 					float textWidth = mAxisLabelPaint.measureText(label);
 					canvas.drawText(label,
