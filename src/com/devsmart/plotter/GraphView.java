@@ -100,17 +100,10 @@ public abstract class GraphView extends View {
 
 	}
 	
-	public void exiting() {
-		mZoomControls.setVisible(false);
-		mZoomControls.setAutoDismissed(false);
-		mZoomControls.setOnZoomListener(null);
-	}
+
 
 	@Override
 	protected Parcelable onSaveInstanceState() {
-		
-		exiting();
-		
 		
 		Bundle retval = new Bundle();
 		retval.putParcelable(KEY_SUPERINSTANCE, super.onSaveInstanceState());
@@ -134,6 +127,20 @@ public abstract class GraphView extends View {
 		mViewPort.right = viewportvalues[2];
 		mViewPort.bottom = viewportvalues[3];
 		drawFrame(mViewPort);
+	}
+	
+	@Override
+	protected void onDetachedFromWindow() {
+		super.onDetachedFromWindow();
+		mZoomControls.setVisible(false);
+	}
+	
+	@Override
+	protected void onVisibilityChanged(View changedView, int visibility) {
+		super.onVisibilityChanged(changedView, visibility);
+		if(visibility != View.VISIBLE){
+			mZoomControls.setVisible(false);
+		}
 	}
 
 	public void addSeries(Series series) {
