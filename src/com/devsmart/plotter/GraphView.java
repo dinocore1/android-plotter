@@ -210,6 +210,10 @@ public abstract class GraphView extends View {
 		screenToViewPort.mapRect(screen);
 		return screen;
 	}
+	
+	public void setDisplayViewPort(RectF viewport) {
+		drawFrame(viewport);
+	}
 
 	@Override
 	protected void onDraw(Canvas canvas) {
