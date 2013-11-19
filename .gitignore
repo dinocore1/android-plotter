@@ -1,2 +1,7 @@
 gen/
 bin/
+.gradle/
+build/
+.project
+.classpath
+.settings/
