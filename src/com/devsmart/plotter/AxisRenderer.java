@@ -5,6 +5,6 @@ import android.graphics.RectF;
 
 public interface AxisRenderer {
 	
-	void drawAxis(Canvas canvas, RectF viewport, GraphView graphview);
+	void drawAxis(Canvas canvas, int canvasWidth, int canvasHeight, RectF viewport);
 
 }

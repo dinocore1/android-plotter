@@ -1,40 +1,28 @@
 package com.devsmart.plotter;
 
-import android.content.Context;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.RectF;
-import android.util.AttributeSet;
 
 import com.devsmart.PeekableIterator;
 
-public class LineGraphView extends GraphView {
+public class LineGraphDataRenderer implements DataRenderer {
 
 	protected Paint mPointPaint = new Paint();
+	protected Series mSeries;
 
-	public LineGraphView(Context context) {
-		super(context);
-		init();
-	}
-
-	public LineGraphView(Context context, AttributeSet attrs) {
-		super(context, attrs);
-		init();
-	}
-
-	protected void init() {
-		mPointPaint.setColor(Color.GREEN);
+	public LineGraphDataRenderer(Series series, int color) {
+		mSeries = series;
+		mPointPaint.setColor(color);
 		mPointPaint.setStrokeWidth(2.0f);
 	}
 
-	protected void drawGraph(Canvas canvas, RectF viewPort){
 
-		//clear the canvas
-		canvas.drawColor(mBackgroundColor);
 
-		Matrix matrix = getViewportToScreenMatrix(new RectF(0,0,canvas.getWidth(), canvas.getHeight()), viewPort); 
+	public void draw(Canvas canvas, RectF viewPort){
+
+		Matrix matrix = GraphView.getViewportToScreenMatrix(new RectF(0,0,canvas.getWidth(), canvas.getHeight()), viewPort); 
 
 		RectF pixel = new RectF();
 
@@ -46,8 +34,8 @@ public class LineGraphView extends GraphView {
 		pixelBin.top = Float.NEGATIVE_INFINITY;
 
 		float[] lastpoint = new float[]{Float.NaN, Float.NaN};
-		for(Series series : mSeries){
-			PeekableIterator<float[]> it = new PeekableIterator<float[]>(series.createIterator());
+		
+			PeekableIterator<float[]> it = new PeekableIterator<float[]>(mSeries.createIterator());
 			
 			
 			//findPixelBinLessThan(pixelBin, it);
@@ -82,36 +70,8 @@ public class LineGraphView extends GraphView {
 				}
 				
 			}
-		}
+		
 
-	}
-	
-	private boolean findPixelBinLessThan(RectF pixelBin, PeekableIterator<float[]> it) {
-		boolean retval = false;
-		float[] point;
-		
-		while(it.hasNext()){
-			
-			point = it.next();
-			pixelBin.bottom = Math.min(pixelBin.bottom, point[1]);
-			pixelBin.top = Math.max(pixelBin.top, point[1]);
-			
-			point = it.peek();
-			
-			if(point[0] >= pixelBin.right){
-				break;
-			}
-			
-			if(point[0] >= pixelBin.left && point[0] < pixelBin.right){
-				pixelBin.bottom = Float.POSITIVE_INFINITY;
-				pixelBin.top = Float.NEGATIVE_INFINITY;
-			}
-			
-			
-			retval = true;
-		}
-		
-		return retval;
 	}
 	
 	private boolean fillPixelBin(RectF pixelBin, PeekableIterator<float[]> it) {

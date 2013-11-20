@@ -1,5 +1,6 @@
 package com.devsmart.plotter;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
@@ -27,7 +28,7 @@ import android.widget.ZoomButtonsController;
 
 import com.devsmart.BackgroundTask;
 
-public abstract class GraphView extends View {
+public class GraphView extends View {
 
 	public static enum Axis {
 		X,
@@ -40,7 +41,7 @@ public abstract class GraphView extends View {
 	private ExecutorService mDrawThread = Executors.newSingleThreadExecutor();
 
 	private RectF mViewPort = new RectF();
-	protected LinkedList<Series> mSeries = new LinkedList<Series>();
+	protected LinkedList<DataRenderer> mPlotData = new LinkedList<DataRenderer>();
 
 	private Bitmap mFrontBuffer;
 	private Matrix mTransformMatrix = new Matrix();
@@ -61,7 +62,7 @@ public abstract class GraphView extends View {
 	protected int mXAxisMargin;
 	protected int mYAxisMargin;
 	
-	protected AxisRenderer mAxisRenderer = new SimpleAxisRenderer();
+	protected AxisRenderer mAxisRenderer;
 
 	private ZoomButtonsController mZoomControls;
 
@@ -76,6 +77,7 @@ public abstract class GraphView extends View {
 	}
 
 	private void init() {
+		mAxisRenderer = new SimpleAxisRenderer(this);
 		mPanGestureDetector = new GestureDetector(mSimpleGestureListener);
 		mScaleGestureDetector = new XYScaleGestureDetector(getContext(), mSimpleScaleGestureListener);
 		mDrawPaint.setFilterBitmap(true);
@@ -143,17 +145,17 @@ public abstract class GraphView extends View {
 		}
 	}
 
-	public void addSeries(Series series) {
-		mSeries.add(series);
+	public void addSeries(DataRenderer series) {
+		mPlotData.add(series);
 		drawFrame(mViewPort);
 	}
 
-	public void removeSeries(Series series) {
-		mSeries.remove(series);
+	public void removeSeries(DataRenderer series) {
+		mPlotData.remove(series);
 		drawFrame(mViewPort);
 	}
 
-	public Matrix getViewportToScreenMatrix(
+	public static Matrix getViewportToScreenMatrix(
 			RectF screen,
 			RectF viewPort){
 
@@ -220,17 +222,14 @@ public abstract class GraphView extends View {
 		if(mFrontBuffer != null){
 			canvas.drawBitmap(mFrontBuffer, mTransformMatrix, mDrawPaint);
 		}
-		mAxisRenderer.drawAxis(canvas, mViewPort, this);
+		mAxisRenderer.drawAxis(canvas, getMeasuredWidth(), getMeasuredHeight(), mViewPort);
 	}
-
-	protected abstract void drawGraph(Canvas canvas, RectF viewPort);
-
 
 	private void drawFrame(final RectF viewport) {
 		if(mBackgroundDrawTask != null){
 			mBackgroundDrawTask.mCanceled = true;
 		}
-		mBackgroundDrawTask = new BackgroundDrawTask(getMeasuredWidth(), getMeasuredHeight(), new RectF(viewport));
+		mBackgroundDrawTask = new BackgroundDrawTask(viewport);
 		BackgroundTask.runBackgroundTask(mBackgroundDrawTask, mDrawThread);
 	}
 
@@ -241,18 +240,23 @@ public abstract class GraphView extends View {
 		private Bitmap mDrawBuffer;
 		private boolean mCanceled = false;
 		private final RectF viewport;
+		private ArrayList<DataRenderer> mData;
 
-		public BackgroundDrawTask(int width, int height, RectF viewport){
-			this.width = width;
-			this.height = height;
-			this.viewport = new RectF(viewport);
+		public BackgroundDrawTask(RectF view){
+			this.width = getMeasuredWidth();
+			this.height = getMeasuredHeight();
+			this.viewport = new RectF(view);
+			this.mData = new ArrayList<DataRenderer>(mPlotData);
 		}
 
 		@Override
 		public void onBackground() {
 			if(!mCanceled){
-				mDrawBuffer = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
-				drawGraph(new Canvas(mDrawBuffer), viewport);
+				mDrawBuffer = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_4444);
+				Canvas c = new Canvas(mDrawBuffer);
+				for(DataRenderer r : mData){
+					r.draw(c, viewport);
+				}
 			}
 		}
 
@@ -263,10 +267,8 @@ public abstract class GraphView extends View {
 				mViewPort = viewport;
 				mTransformMatrix.reset();
 				invalidate();
-				//mBackgroundDrawTask = null;
 			} else if(mDrawBuffer != null) {
 				mDrawBuffer.recycle();
-				mDrawBuffer = null;
 			}
 		}
 
@@ -503,26 +505,28 @@ public abstract class GraphView extends View {
 
 
 	}
+	
+	public static RectF getSeriesLimits(Series series) {
+		RectF retval = new RectF();
+		retval.set(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY,
+				Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY);
+		
+		Iterator<float[]> it = series.createIterator();
+		while(it.hasNext()){
+			float[] point = it.next();
+			retval.left = Math.min(retval.left, point[0]);
+			retval.right = Math.max(retval.right, point[0]);
+			retval.top = Math.min(retval.top, point[1]);
+			retval.bottom = Math.max(retval.bottom, point[1]);
+		}
+		
+		return retval;
+	}
 
 	public void autoScaleDomainAndRange() {
 
+
 		/*
-		mViewPort.set(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY,
-				Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY);
-		for(Series series : mSeries){
-			Iterator<float[]> it = series.createIterator();
-			while(it.hasNext()){
-				float[] point = it.next();
-				mViewPort.left = Math.min(mViewPort.left, point[0]);
-				mViewPort.right = Math.max(mViewPort.right, point[0]);
-				mViewPort.top = Math.min(mViewPort.top, point[1]);
-				mViewPort.bottom = Math.max(mViewPort.bottom, point[1]);
-			}
-		}
-		drawFrame(mViewPort);
-		 */
-
-
 		BackgroundTask.runBackgroundTask(new BackgroundTask() {
 
 			RectF viewport = new RectF();
@@ -556,6 +560,7 @@ public abstract class GraphView extends View {
 			}
 
 		}, mDrawThread);
+		*/
 
 	}
 

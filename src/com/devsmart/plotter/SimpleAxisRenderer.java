@@ -23,38 +23,35 @@ public class SimpleAxisRenderer implements AxisRenderer {
 	String mXAxisLabel = "Wavelength";
 	String mYAxisLabel = "Intensity";
 	
-	public SimpleAxisRenderer() {
+	DisplayMetrics mDisplayMetrics;
+	
+	public SimpleAxisRenderer(GraphView graphview) {
+		mDisplayMetrics = graphview.getContext().getResources().getDisplayMetrics();
+		
+		mAxisLabelPaint.setColor(Color.BLACK);
+		mAxisLabelPaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 15, mDisplayMetrics));
+		mAxisLabelPaint.setAntiAlias(true);
+		
+		mAxisTickPaint.setColor(Color.DKGRAY);
+		mAxisTickPaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10, mDisplayMetrics));
+		mAxisTickPaint.setAntiAlias(true);
 		
 	}
 	
-	protected boolean init = false;
 	private float[] mYAxis;
 	private float[] mXAxis;
 	float[] points = new float[4];
 	Rect bounds = new Rect();
+	RectF boundsf = new RectF();
 	
-	protected void init(GraphView graphview) {
-		DisplayMetrics metrics = graphview.getContext().getResources().getDisplayMetrics();
-		
-		final int canvasWidth = graphview.getWidth();
-		final int canvasHeight = graphview.getHeight();
-		
-		mAxisLabelPaint.setColor(Color.BLACK);
-		mAxisLabelPaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 15, metrics));
-		mAxisLabelPaint.setAntiAlias(true);
-		
-		mAxisTickPaint.setColor(Color.DKGRAY);
-		mAxisTickPaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10, metrics));
-		mAxisTickPaint.setAntiAlias(true);
-		
-		
+	protected void calcBounds(final int canvasWidth, final int canvasHeight) {
 		mAxisLabelPaint.getTextBounds("1", 0, 1, bounds);
 		float axisLabelHeight = bounds.height();
 		
 		mAxisTickPaint.getTextBounds("1", 0, 1, bounds);
 		float tickLabelHeight = bounds.height();
 		
-		float axisLabelBoundery = axisLabelHeight + tickLabelHeight + TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 3, metrics);
+		float axisLabelBoundery = axisLabelHeight + tickLabelHeight + TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 3, mDisplayMetrics);
 		
 		
 		float height = canvasHeight - axisLabelBoundery - mPlotMargins.height();
@@ -64,28 +61,19 @@ public class SimpleAxisRenderer implements AxisRenderer {
 		
 		mXAxis = new float[]{axisLabelBoundery + mPlotMargins.left, canvasHeight - axisLabelBoundery - mPlotMargins.bottom,
 										canvasWidth - mPlotMargins.right, canvasHeight - axisLabelBoundery - mPlotMargins.bottom};
-		
-		init = true;
 	}
 	
-	
 	@Override
-	public void drawAxis(Canvas canvas, RectF viewPort, GraphView graphview) {
+	public void drawAxis(Canvas canvas, final int canvasWidth, final int canvasHeight, RectF viewPort) {
 		
-		if(!init){
-			init(graphview);
-		}
+		calcBounds(canvasWidth, canvasHeight);
 		
-		DisplayMetrics metrics = graphview.getContext().getResources().getDisplayMetrics();
-
-		final int canvasWidth = graphview.getWidth();
-		final int canvasHeight = graphview.getHeight();
-
 		Paint axisPaint = new Paint();
 		axisPaint.setColor(mAxisColor);
 		axisPaint.setStrokeWidth(2);
 
-		Matrix matrix = graphview.getViewportToScreenMatrix(new RectF(0,0,canvasWidth, canvasHeight), viewPort);
+		boundsf.set(0,0,canvasWidth, canvasHeight);
+		Matrix matrix = GraphView.getViewportToScreenMatrix(boundsf, viewPort);
 		
 		
 		if(mDrawXAxis) {
@@ -95,7 +83,7 @@ public class SimpleAxisRenderer implements AxisRenderer {
 			
 			//draw label
 			mAxisLabelPaint.getTextBounds(mXAxisLabel, 0, mXAxisLabel.length(), bounds);
-			float y = canvasHeight - mPlotMargins.bottom + bounds.bottom + TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 3, metrics);
+			float y = canvasHeight - mPlotMargins.bottom + bounds.bottom + TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 3, mDisplayMetrics);
 			canvas.drawText(mXAxisLabel, (mXAxis[2]-mXAxis[0])/2 - bounds.width()/2 + mXAxis[0], y, mAxisLabelPaint);
 			
 			//draw ticks
@@ -108,16 +96,23 @@ public class SimpleAxisRenderer implements AxisRenderer {
 				points[3] = 0;
 				matrix.mapPoints(points);
 				points[1] = mXAxis[1];
-				points[3] = mXAxis[1] - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, metrics);
-				canvas.drawLines(points, axisPaint);
+				points[3] = mXAxis[1] - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, mDisplayMetrics);
+				
+				if(points[0] >= mXAxis[0]) {
+					canvas.drawLines(points, axisPaint);
+					
+					String label = getTickLabel(xPoint);
+					mAxisTickPaint.getTextBounds(label, 0, label.length(), bounds);
+					
+			
+					canvas.drawText(label,
+							points[0]-bounds.width()/2,
+							points[1] + bounds.height() + TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, mDisplayMetrics),
+							mAxisTickPaint);
+				}
 
-				String label = getTickLabel(xPoint);
-				mAxisTickPaint.getTextBounds(label, 0, label.length(), bounds);
-
-				canvas.drawText(label,
-						points[0]-bounds.width()/2,
-						points[1] + bounds.height() + TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, metrics),
-						mAxisTickPaint);
+				
+				
 
 				xPoint += dist;
 
@@ -146,19 +141,22 @@ public class SimpleAxisRenderer implements AxisRenderer {
 				points[3] = yPoint;
 				matrix.mapPoints(points);
 				points[0] = mYAxis[0];
-				points[2] = mYAxis[0] + TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, metrics);
-				canvas.drawLines(points, axisPaint);
-
-				String label = getTickLabel(yPoint);
-				mAxisTickPaint.getTextBounds(label, 0, label.length(), bounds);
-				canvas.save();
-				points[2] = points[0]-bounds.height()/2-TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, metrics);
-				points[3] = points[1]+bounds.width()/2;
-				canvas.rotate(-90, points[2], points[3]);
-				canvas.drawText(label,
-						points[2], points[3],
-						mAxisTickPaint);
-				canvas.restore();
+				points[2] = mYAxis[0] + TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, mDisplayMetrics);
+				
+				if(points[1] <= mYAxis[3]) {
+					canvas.drawLines(points, axisPaint);
+	
+					String label = getTickLabel(yPoint);
+					mAxisTickPaint.getTextBounds(label, 0, label.length(), bounds);
+					canvas.save();
+					points[2] = points[0]-bounds.height()/2-TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, mDisplayMetrics);
+					points[3] = points[1]+bounds.width()/2;
+					canvas.rotate(-90, points[2], points[3]);
+					canvas.drawText(label,
+							points[2], points[3],
+							mAxisTickPaint);
+					canvas.restore();
+				}
 
 				yPoint += dist;
 			}
