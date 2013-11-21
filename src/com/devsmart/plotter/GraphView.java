@@ -37,6 +37,8 @@ public class GraphView extends View {
 
 	private static final String KEY_VIEWPORT = "viewport";
 	private static final String KEY_SUPERINSTANCE = "superinstance";
+	
+	private CoordinateSystem mCoordinateSystem = CoordinateSystem.createLinearSystem();
 
 	private ExecutorService mDrawThread = Executors.newSingleThreadExecutor();
 
@@ -65,6 +67,7 @@ public class GraphView extends View {
 	protected AxisRenderer mAxisRenderer;
 
 	private ZoomButtonsController mZoomControls;
+	private Rect mGraphArea;
 
 	public GraphView(Context context) {
 		super(context);
@@ -81,7 +84,7 @@ public class GraphView extends View {
 		mPanGestureDetector = new GestureDetector(mSimpleGestureListener);
 		mScaleGestureDetector = new XYScaleGestureDetector(getContext(), mSimpleScaleGestureListener);
 		mDrawPaint.setFilterBitmap(true);
-		mViewPort.set(-1, -1, 1, 1);
+		mViewPort.set(0, 0, 1, 1);
 		mTransformMatrix.reset();
 
 		//defaults
@@ -173,6 +176,10 @@ public class GraphView extends View {
 	@Override
 	protected void onSizeChanged(int w, int h, int oldw, int oldh) {
 		super.onSizeChanged(w, h, oldw, oldh);
+		
+		mGraphArea = mAxisRenderer.measureGraphArea(w, h);
+		mCoordinateSystem.interpolate(mViewPort, new RectF(0,0,mGraphArea.width(), mGraphArea.height()));
+		
 		drawFrame(mViewPort);
 	}
 
@@ -199,26 +206,24 @@ public class GraphView extends View {
 	}
 
 	public RectF getDisplayViewPort(){
+		RectF rect = new RectF(mGraphArea);
+		
 		Matrix m = new Matrix();
 		mTransformMatrix.invert(m);
-
-		RectF screen = new RectF(0,0, getWidth(), getHeight());
-		m.mapRect(screen);
-
-		Matrix viewPortTransform = getViewportToScreenMatrix(new RectF(0,0,getWidth(), getHeight()), mViewPort);
-		Matrix screenToViewPort = new Matrix();
-		viewPortTransform.invert(screenToViewPort);
-
-		screenToViewPort.mapRect(screen);
-		return screen;
+		m.mapRect(rect);
+		
+		mCoordinateSystem.getInverse().mapRect(rect);
+		
+		return rect;
 	}
 	
 	public void setDisplayViewPort(RectF viewport) {
 		drawFrame(viewport);
 	}
-
+	
 	@Override
 	protected void onDraw(Canvas canvas) {
+		
 		if(mFrontBuffer != null){
 			canvas.drawBitmap(mFrontBuffer, mTransformMatrix, mDrawPaint);
 		}
@@ -241,11 +246,22 @@ public class GraphView extends View {
 		private boolean mCanceled = false;
 		private final RectF viewport;
 		private ArrayList<DataRenderer> mData;
+		private CoordinateSystem mCoordCopy;
 
 		public BackgroundDrawTask(RectF view){
-			this.width = getMeasuredWidth();
-			this.height = getMeasuredHeight();
+			
 			this.viewport = new RectF(view);
+			if(mCoordinateSystem == null){
+				mCanceled = true;
+				return;
+			}
+			
+			this.width = mGraphArea.width();
+			this.height = mGraphArea.height();
+			this.mCoordCopy = mCoordinateSystem.copy();
+			this.mCoordCopy.interpolate(viewport, new RectF(0,0,width,height));
+			
+			
 			this.mData = new ArrayList<DataRenderer>(mPlotData);
 		}
 
@@ -255,7 +271,7 @@ public class GraphView extends View {
 				mDrawBuffer = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_4444);
 				Canvas c = new Canvas(mDrawBuffer);
 				for(DataRenderer r : mData){
-					r.draw(c, viewport);
+					r.draw(c, viewport, mCoordCopy);
 				}
 			}
 		}
@@ -331,179 +347,6 @@ public class GraphView extends View {
 	    final double magnitude = Math.pow(10, power);
 	    final long shifted = Math.round(num*magnitude);
 	    return shifted/magnitude;
-	}
-	
-	protected void drawAxis2(Canvas canvas, RectF viewPort) {
-		Rect bounds = new Rect();
-		DisplayMetrics metrics = getContext().getResources().getDisplayMetrics();
-		float[] points;
-
-		final int canvasWidth = canvas.getWidth();
-		final int canvasHeight = canvas.getHeight();
-
-		Paint axisPaint = new Paint();
-		axisPaint.setColor(mAxisColor);
-		axisPaint.setStrokeWidth(2);
-
-		Matrix matrix = getViewportToScreenMatrix(new RectF(0,0,canvasWidth, canvasHeight), viewPort);
-
-		if(mDrawXAxis){
-			//draw X axis
-			points = new float[]{
-					TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left, metrics), canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom, metrics),
-					canvasWidth, canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom, metrics)
-			};
-			canvas.drawLines(points, axisPaint);
-
-			float xPoint = 	(float) (mXAxisDevision *  Math.floor(viewPort.left / mXAxisDevision));
-			while(xPoint < viewPort.right+mXAxisDevision/2){
-				points[0] = xPoint;
-				points[1] = 0;
-				points[2] = xPoint;
-				points[3] = 0;
-				matrix.mapPoints(points);
-				points[1] = canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom, metrics);
-				points[3] = canvasHeight - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.bottom + 10, metrics);
-				canvas.drawLines(points, axisPaint);
-
-				String label = String.valueOf(xPoint);
-				mAxisLabelPaint.getTextBounds(label, 0, label.length(), bounds);
-
-				canvas.drawText(label,
-						points[0]-bounds.width()/2,
-						points[1] + bounds.height() + TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, metrics),
-						mAxisLabelPaint);
-
-				xPoint += mXAxisDevision;
-
-			}
-
-
-		}
-
-		if(mDrawYAxis){
-			//draw Y axis
-			points = new float[]{
-					TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left, metrics), 0,
-					TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left, metrics), canvasHeight
-			};
-			canvas.drawLines(points, axisPaint);
-
-			float yPoint = 	(float) (mYAxisDevision *  Math.floor(viewPort.top / mYAxisDevision));
-			while(yPoint < viewPort.bottom+mYAxisDevision/2){
-				points[0] = 0;
-				points[1] = yPoint;
-				points[2] = 0;
-				points[3] = yPoint;
-				matrix.mapPoints(points);
-				points[0] = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left, metrics);
-				points[2] = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, mPlotMargins.left + 10, metrics);
-				canvas.drawLines(points, axisPaint);
-
-				String label = String.valueOf(yPoint);
-				mAxisLabelPaint.getTextBounds(label, 0, label.length(), bounds);
-				canvas.drawText(label,
-						points[0]-bounds.width()-TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, metrics),
-						points[1]+bounds.height()/2,
-						mAxisLabelPaint);
-
-				yPoint += mYAxisDevision;
-			}
-
-		}
-
-	}
-
-	protected void drawAxis(Canvas canvas, RectF viewPort) {
-
-		Rect bounds = new Rect();
-		DisplayMetrics metrics = getContext().getResources().getDisplayMetrics();
-		float[] points;
-
-		final int canvasWidth = canvas.getWidth();
-		final int canvasHeight = canvas.getHeight();
-
-		Matrix matrix = getViewportToScreenMatrix(new RectF(0,0,canvasWidth, canvasHeight), viewPort); 
-
-		Paint axisPaint = new Paint();
-		axisPaint.setColor(mAxisColor);
-		axisPaint.setStrokeWidth(2);
-
-		if(mDrawXAxis){
-			//draw X axis
-			points = new float[]{
-					viewPort.left, 0,
-					viewPort.right, 0
-			};
-			matrix.mapPoints(points);
-			canvas.drawLines(points, axisPaint);
-
-			float xPoint = 	(float) (mXAxisDevision *  Math.floor(viewPort.left / mXAxisDevision));
-			while(xPoint < viewPort.right+mXAxisDevision/2){
-				if(xPoint != 0.0f){
-					points[0] = xPoint;
-					points[1] = 0;
-					points[2] = xPoint;
-					points[3] = 0;
-					matrix.mapPoints(points);
-					points[1] -= TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8, metrics);
-					points[3] += TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8, metrics);
-					canvas.drawLines(points, axisPaint);
-
-					String label = String.valueOf(xPoint);
-					mAxisLabelPaint.getTextBounds(label, 0, label.length(), bounds);
-
-					canvas.drawText(label,
-							points[0]-bounds.width()/2,
-							points[1] + bounds.height() + TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 15, metrics),
-							mAxisLabelPaint);
-
-				}
-				xPoint += mXAxisDevision;
-
-			}
-
-
-		}
-
-
-		if(mDrawYAxis){
-			//draw Y axis
-			points = new float[]{
-					0, viewPort.top,
-					0, viewPort.bottom
-			};
-			matrix.mapPoints(points);
-			canvas.drawLines(points, axisPaint);
-
-			float yPoint = 	(float) (mYAxisDevision *  Math.floor(viewPort.top / mYAxisDevision));
-			while(yPoint < viewPort.bottom+mYAxisDevision/2){
-				if(yPoint != 0.0f){
-					points[0] = 0;
-					points[1] = yPoint;
-					points[2] = 0;
-					points[3] = yPoint;
-					matrix.mapPoints(points);
-					points[0] -= TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8, metrics);
-					points[2] += TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8, metrics);
-					canvas.drawLines(points, axisPaint);
-
-					String label = String.valueOf(yPoint);
-					mAxisLabelPaint.getTextBounds(label, 0, label.length(), bounds);
-					float textWidth = mAxisLabelPaint.measureText(label);
-					canvas.drawText(label,
-							points[0]-textWidth-TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, metrics),
-							points[1]+bounds.height()/2,
-							mAxisLabelPaint);
-				}
-				yPoint += mYAxisDevision;
-			}
-
-		}
-
-
-
-
 	}
 	
 	public static RectF getSeriesLimits(Series series) {

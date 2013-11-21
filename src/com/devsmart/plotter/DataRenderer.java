@@ -5,6 +5,6 @@ import android.graphics.RectF;
 
 public interface DataRenderer {
 	
-	public void draw(Canvas canvas, RectF viewPort);
+	public void draw(Canvas canvas, RectF viewPort, CoordinateSystem coordSystem);
 
 }

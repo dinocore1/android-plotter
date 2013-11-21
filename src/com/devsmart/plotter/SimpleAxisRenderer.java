@@ -43,6 +43,7 @@ public class SimpleAxisRenderer implements AxisRenderer {
 	float[] points = new float[4];
 	Rect bounds = new Rect();
 	RectF boundsf = new RectF();
+	Rect graphArea = new Rect();
 	
 	protected void calcBounds(final int canvasWidth, final int canvasHeight) {
 		mAxisLabelPaint.getTextBounds("1", 0, 1, bounds);
@@ -62,6 +63,8 @@ public class SimpleAxisRenderer implements AxisRenderer {
 		mXAxis = new float[]{axisLabelBoundery + mPlotMargins.left, canvasHeight - axisLabelBoundery - mPlotMargins.bottom,
 										canvasWidth - mPlotMargins.right, canvasHeight - axisLabelBoundery - mPlotMargins.bottom};
 	}
+	
+	
 	
 	@Override
 	public void drawAxis(Canvas canvas, final int canvasWidth, final int canvasHeight, RectF viewPort) {
@@ -120,6 +123,9 @@ public class SimpleAxisRenderer implements AxisRenderer {
 		}
 		
 		if(mDrawYAxis){
+			
+			
+			
 			//draw Y axis
 			canvas.drawLines(mYAxis, axisPaint);
 		
@@ -168,6 +174,19 @@ public class SimpleAxisRenderer implements AxisRenderer {
 	protected String getTickLabel(float value) {
 		return String.valueOf(MathUtils.round(value, 1));
 		//return String.valueOf(value);
+	}
+
+
+
+	@Override
+	public Rect measureGraphArea(int screenWidth, int screenHeight) {
+		calcBounds(screenWidth, screenHeight);
+		
+		graphArea.left = (int) Math.floor(mXAxis[0]);
+		graphArea.right = (int) Math.ceil(mXAxis[2]);
+		graphArea.top = (int) Math.floor(mYAxis[1]);
+		graphArea.bottom = (int) Math.ceil(mYAxis[3]);
+		return graphArea;
 	}
 	
 

@@ -19,14 +19,16 @@ public class LineGraphDataRenderer implements DataRenderer {
 	}
 
 
+	RectF pixel = new RectF();
+	RectF pixelBin = new RectF();
+	
+	public void draw(Canvas canvas, RectF viewPort, CoordinateSystem coordSystem){
 
-	public void draw(Canvas canvas, RectF viewPort){
+		try {
+		canvas.save();
+		canvas.scale(1, -1);
+		canvas.translate(0, -canvas.getHeight());
 
-		Matrix matrix = GraphView.getViewportToScreenMatrix(new RectF(0,0,canvas.getWidth(), canvas.getHeight()), viewPort); 
-
-		RectF pixel = new RectF();
-
-		RectF pixelBin = new RectF();
 		final float xBinWidth = viewPort.width()/canvas.getWidth();
 		pixelBin.left = viewPort.left-xBinWidth;
 		pixelBin.right = viewPort.left;
@@ -47,7 +49,8 @@ public class LineGraphDataRenderer implements DataRenderer {
 					break;
 				}
 			}
-			matrix.mapPoints(lastpoint);
+			
+			coordSystem.mapPoints(lastpoint);
 			
 			boolean findOneMore = false;
 			while(it.hasNext()){
@@ -57,7 +60,7 @@ public class LineGraphDataRenderer implements DataRenderer {
 				
 				if(fillPixelBin(pixelBin, it)){
 					//draw pixel
-					matrix.mapRect(pixel, pixelBin);
+					coordSystem.mapRect(pixel, pixelBin);
 					canvas.drawLine(lastpoint[0], lastpoint[1], pixel.left, pixel.top, mPointPaint);
 					lastpoint[0] = pixel.left;
 					lastpoint[1] = pixel.top;
@@ -70,8 +73,9 @@ public class LineGraphDataRenderer implements DataRenderer {
 				}
 				
 			}
-		
-
+		} finally {
+			canvas.restore();
+		}
 	}
 	
 	private boolean fillPixelBin(RectF pixelBin, PeekableIterator<float[]> it) {
