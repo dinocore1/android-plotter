@@ -6,6 +6,7 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.Matrix.ScaleToFit;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
 
@@ -65,24 +66,24 @@ public class SimpleAxisRenderer implements AxisRenderer {
 	}
 	
 	
+	Matrix m = new Matrix();
 	
 	@Override
-	public void drawAxis(Canvas canvas, final int canvasWidth, final int canvasHeight, RectF viewPort) {
+	public void drawAxis(Canvas canvas, final int canvasWidth, final int canvasHeight, RectF viewPort, CoordinateSystem coordSystem) {
 		
-		calcBounds(canvasWidth, canvasHeight);
+		measureGraphArea(canvasWidth, canvasHeight);
 		
-		Paint axisPaint = new Paint();
-		axisPaint.setColor(mAxisColor);
-		axisPaint.setStrokeWidth(2);
-
-		boundsf.set(0,0,canvasWidth, canvasHeight);
-		Matrix matrix = GraphView.getViewportToScreenMatrix(boundsf, viewPort);
+		m.setRectToRect(new RectF(0,0,graphArea.width(),graphArea.height()), new RectF(graphArea), ScaleToFit.FILL);
+		m.postScale(1, -1);
+		m.postTranslate(0, graphArea.height());
 		
+		//Debug axis display
+		//canvas.drawText(viewPort.toString(), 50, 50, mAxisTickPaint);
 		
 		if(mDrawXAxis) {
 			
 			//draw axis
-			canvas.drawLines(mXAxis, axisPaint);
+			canvas.drawLines(mXAxis, mAxisTickPaint);
 			
 			//draw label
 			mAxisLabelPaint.getTextBounds(mXAxisLabel, 0, mXAxisLabel.length(), bounds);
@@ -97,12 +98,13 @@ public class SimpleAxisRenderer implements AxisRenderer {
 				points[1] = 0;
 				points[2] = xPoint;
 				points[3] = 0;
-				matrix.mapPoints(points);
+				coordSystem.mapPoints(points);
+				m.mapPoints(points);
 				points[1] = mXAxis[1];
 				points[3] = mXAxis[1] - TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, mDisplayMetrics);
 				
 				if(points[0] >= mXAxis[0]) {
-					canvas.drawLines(points, axisPaint);
+					canvas.drawLines(points, mAxisTickPaint);
 					
 					String label = getTickLabel(xPoint);
 					mAxisTickPaint.getTextBounds(label, 0, label.length(), bounds);
@@ -127,7 +129,7 @@ public class SimpleAxisRenderer implements AxisRenderer {
 			
 			
 			//draw Y axis
-			canvas.drawLines(mYAxis, axisPaint);
+			canvas.drawLines(mYAxis, mAxisTickPaint);
 		
 			//draw label
 			mAxisLabelPaint.getTextBounds(mYAxisLabel, 0, mYAxisLabel.length(), bounds);
@@ -145,12 +147,13 @@ public class SimpleAxisRenderer implements AxisRenderer {
 				points[1] = yPoint;
 				points[2] = 0;
 				points[3] = yPoint;
-				matrix.mapPoints(points);
+				coordSystem.mapPoints(points);
+				m.mapPoints(points);
 				points[0] = mYAxis[0];
 				points[2] = mYAxis[0] + TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, mDisplayMetrics);
 				
 				if(points[1] <= mYAxis[3]) {
-					canvas.drawLines(points, axisPaint);
+					canvas.drawLines(points, mAxisTickPaint);
 	
 					String label = getTickLabel(yPoint);
 					mAxisTickPaint.getTextBounds(label, 0, label.length(), bounds);
@@ -172,8 +175,8 @@ public class SimpleAxisRenderer implements AxisRenderer {
 	}
 	
 	protected String getTickLabel(float value) {
-		return String.valueOf(MathUtils.round(value, 1));
-		//return String.valueOf(value);
+		return String.format("%3.1f", value);
+		//return String.valueOf(MathUtils.round(value, 1));
 	}
 
 

@@ -158,20 +158,7 @@ public class GraphView extends View {
 		drawFrame(mViewPort);
 	}
 
-	public static Matrix getViewportToScreenMatrix(
-			RectF screen,
-			RectF viewPort){
 
-		Matrix matrix = new Matrix();
-		matrix.setRectToRect(viewPort, 
-				screen,
-				ScaleToFit.FILL);
-
-		matrix.postScale(1, -1);
-		matrix.postTranslate(0, screen.height());
-
-		return matrix;
-	}
 
 	@Override
 	protected void onSizeChanged(int w, int h, int oldw, int oldh) {
@@ -206,15 +193,23 @@ public class GraphView extends View {
 	}
 
 	public RectF getDisplayViewPort(){
-		RectF rect = new RectF(mGraphArea);
+		RectF rect = new RectF(0,0,mGraphArea.width(), mGraphArea.height());
 		
 		Matrix m = new Matrix();
 		mTransformMatrix.invert(m);
+		m.postScale(1, -1);
+		m.postTranslate(0, mGraphArea.height());
 		m.mapRect(rect);
 		
 		mCoordinateSystem.getInverse().mapRect(rect);
 		
 		return rect;
+	}
+	
+	public CoordinateSystem getCoordinateSystem() {
+		CoordinateSystem retval = mCoordinateSystem.copy();
+		retval.interpolate(getDisplayViewPort(), new RectF(0,0,mGraphArea.width(),mGraphArea.height()));
+		return retval;
 	}
 	
 	public void setDisplayViewPort(RectF viewport) {
@@ -225,9 +220,12 @@ public class GraphView extends View {
 	protected void onDraw(Canvas canvas) {
 		
 		if(mFrontBuffer != null){
+			canvas.save();
+			canvas.translate(mGraphArea.left, mGraphArea.top);
 			canvas.drawBitmap(mFrontBuffer, mTransformMatrix, mDrawPaint);
+			canvas.restore();
 		}
-		mAxisRenderer.drawAxis(canvas, getMeasuredWidth(), getMeasuredHeight(), mViewPort);
+		mAxisRenderer.drawAxis(canvas, getMeasuredWidth(), getMeasuredHeight(), getDisplayViewPort(), getCoordinateSystem());
 	}
 
 	private void drawFrame(final RectF viewport) {
@@ -251,7 +249,7 @@ public class GraphView extends View {
 		public BackgroundDrawTask(RectF view){
 			
 			this.viewport = new RectF(view);
-			if(mCoordinateSystem == null){
+			if(mCoordinateSystem == null || mGraphArea == null){
 				mCanceled = true;
 				return;
 			}
@@ -282,6 +280,7 @@ public class GraphView extends View {
 				mFrontBuffer = mDrawBuffer;
 				mViewPort = viewport;
 				mTransformMatrix.reset();
+				mCoordinateSystem = mCoordCopy;
 				invalidate();
 			} else if(mDrawBuffer != null) {
 				mDrawBuffer.recycle();

@@ -23,6 +23,6 @@ public interface AxisRenderer {
 	 * @param viewport
 	 * @return
 	 */
-	void drawAxis(Canvas canvas, int canvasWidth, int canvasHeight, RectF viewport);
+	void drawAxis(Canvas canvas, int canvasWidth, int canvasHeight, RectF viewport, CoordinateSystem coordSystem);
 
 }
