@@ -41,6 +41,34 @@ public class CoordinateSystem {
 		
 	}
 	
+	/**
+	 * Apply this system to the array of 2D points, and write the transformed points back into the array
+	 * @param pts
+	 */
+	public void mapPoints(float[] pts) {
+		mapPoints(pts, pts);
+		/*
+		for(int x=0;x<pts.length;x=x+2){
+			pts[x] = mXAxisFunction.value(pts[x]);
+		}
+		
+		for(int y=1;y<pts.length;y=y+2){
+			pts[y] = mYAxisFunction.value(pts[y]);
+		}
+		*/
+		
+	}
+	
+	public void mapPoints(float[] dest, float[] src) {
+		for(int x=0;x<src.length;x=x+2){
+			dest[x] = mXAxisFunction.value(src[x]);
+		}
+		
+		for(int y=1;y<src.length;y=y+2){
+			dest[y] = mYAxisFunction.value(src[y]);
+		}
+	}
+
 	public CoordinateSystem getInverse() {
 		if(mInverse == null){
 			mInverse = new CoordinateSystem();
@@ -61,21 +89,6 @@ public class CoordinateSystem {
 		retval.mYAxisFunction = new LinearFunction();
 		
 		return retval;
-	}
-
-	/**
-	 * Apply this system to the array of 2D points, and write the transformed points back into the array
-	 * @param pts
-	 */
-	public void mapPoints(float[] pts) {
-		for(int x=0;x<pts.length;x=x+2){
-			pts[x] = mXAxisFunction.value(pts[x]);
-		}
-		
-		for(int y=1;y<pts.length;y=y+2){
-			pts[y] = mYAxisFunction.value(pts[y]);
-		}
-		
 	}
 
 	

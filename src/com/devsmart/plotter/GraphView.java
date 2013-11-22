@@ -213,6 +213,9 @@ public class GraphView extends View {
 	}
 	
 	public void setDisplayViewPort(RectF viewport) {
+		mTransformMatrix.reset();
+		mViewPort = new RectF(viewport);
+		mCoordinateSystem.interpolate(mViewPort, new RectF(0,0,mGraphArea.width(), mGraphArea.height()));
 		drawFrame(viewport);
 	}
 	
@@ -268,9 +271,19 @@ public class GraphView extends View {
 			if(!mCanceled){
 				mDrawBuffer = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_4444);
 				Canvas c = new Canvas(mDrawBuffer);
-				for(DataRenderer r : mData){
-					r.draw(c, viewport, mCoordCopy);
+				
+				try {
+					c.save();
+					c.scale(1, -1);
+					c.translate(0, -c.getHeight());
+					
+					for(DataRenderer r : mData){
+						r.draw(c, viewport, mCoordCopy);
+					}
+				}finally {
+					c.restore();
 				}
+				
 			}
 		}
 

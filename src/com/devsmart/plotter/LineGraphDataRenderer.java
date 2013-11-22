@@ -24,10 +24,6 @@ public class LineGraphDataRenderer implements DataRenderer {
 	
 	public void draw(Canvas canvas, RectF viewPort, CoordinateSystem coordSystem){
 
-		try {
-		canvas.save();
-		canvas.scale(1, -1);
-		canvas.translate(0, -canvas.getHeight());
 
 		final float xBinWidth = viewPort.width()/canvas.getWidth();
 		pixelBin.left = viewPort.left-xBinWidth;
@@ -73,9 +69,7 @@ public class LineGraphDataRenderer implements DataRenderer {
 				}
 				
 			}
-		} finally {
-			canvas.restore();
-		}
+		
 	}
 	
 	private boolean fillPixelBin(RectF pixelBin, PeekableIterator<float[]> it) {
