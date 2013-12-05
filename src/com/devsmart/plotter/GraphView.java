@@ -298,6 +298,7 @@ public class GraphView extends View {
 			} else if(mDrawBuffer != null) {
 				mDrawBuffer.recycle();
 			}
+			mDrawBuffer = null;
 		}
 
 

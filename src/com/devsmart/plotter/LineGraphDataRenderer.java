@@ -64,7 +64,7 @@ public class LineGraphDataRenderer implements DataRenderer {
 						break;
 					}
 				}
-				if(it.peek()[0] > viewPort.right){
+				if(it.peek() != null && it.peek()[0] > viewPort.right){
 					findOneMore = true;
 				}
 				
