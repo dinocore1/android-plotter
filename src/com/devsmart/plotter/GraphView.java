@@ -3,6 +3,7 @@ package com.devsmart.plotter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -238,6 +239,30 @@ public class GraphView extends View {
 		mBackgroundDrawTask = new BackgroundDrawTask(viewport);
 		BackgroundTask.runBackgroundTask(mBackgroundDrawTask, mDrawThread);
 	}
+
+    public static Bitmap drawBitmap(int width, int height, List<DataRenderer> data,
+                                    RectF viewport,
+                                    CoordinateSystem coordinateSystem) {
+
+        CoordinateSystem mCoordCopy = coordinateSystem.copy();
+        mCoordCopy.interpolate(viewport, new RectF(0,0,width,height));
+
+        Bitmap drawBuffer = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_4444);
+        Canvas c = new Canvas(drawBuffer);
+
+        try {
+            c.save();
+            c.scale(1, -1);
+            c.translate(0, -c.getHeight());
+
+            for(DataRenderer r : data){
+                r.draw(c, viewport, mCoordCopy);
+            }
+        }finally {
+            c.restore();
+        }
+        return drawBuffer;
+    }
 
 	private class BackgroundDrawTask extends BackgroundTask {
 
