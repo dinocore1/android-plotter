@@ -17,6 +17,8 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.Parcelable;
 import android.support.v4.view.MotionEventCompat;
 import android.util.AttributeSet;
@@ -25,6 +27,8 @@ import android.util.TypedValue;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.animation.DecelerateInterpolator;
+import android.view.animation.Interpolator;
 import android.widget.ZoomButtonsController;
 
 import com.devsmart.BackgroundTask;
@@ -69,6 +73,7 @@ public class GraphView extends View {
 
 	private ZoomButtonsController mZoomControls;
 	private Rect mGraphArea;
+    private RectF mViewPortBounds;
 
 	public GraphView(Context context) {
 		super(context);
@@ -174,12 +179,14 @@ public class GraphView extends View {
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
 
+        cancelAnimation();
 		mZoomControls.setVisible(true);
 
 		final int action = MotionEventCompat.getActionMasked(event);
 		switch(action){
 		case MotionEvent.ACTION_UP:
-			updateViewport();
+            doBoundsCheck();
+			//updateViewport();
 			break;
 		}
 
@@ -192,6 +199,68 @@ public class GraphView extends View {
 		RectF newViewport = getDisplayViewPort();
 		drawFrame(newViewport);
 	}
+
+    private Interpolator mAnimationInterpolator = null;
+    private long mAnimationEndTime = 0;
+    private static final long mAnimationTime = 1000;
+    private RectF mAnimationDest;
+    private void doAnimation() {
+        if(mAnimationInterpolator != null) {
+            long now = System.currentTimeMillis();
+            if(mAnimationEndTime <= now) {
+                mAnimationInterpolator = null;
+                drawFrame(mAnimationDest);
+                return;
+            }
+            float done = 1 - ((float)(mAnimationEndTime - now) / mAnimationTime);
+            done = mAnimationInterpolator.getInterpolation(done);
+            RectF newViewport = new RectF();
+            RectF currentViewport = getDisplayViewPort();
+            newViewport.left = (1-done)*currentViewport.left + done*mAnimationDest.left;
+            newViewport.right = (1-done)*currentViewport.right + done*mAnimationDest.right;
+            newViewport.top = (1-done)*currentViewport.top + done*mAnimationDest.top;
+            newViewport.bottom = (1-done)*currentViewport.bottom + done*mAnimationDest.bottom;
+            drawFrame(newViewport);
+        }
+    }
+    private void cancelAnimation() {
+        mAnimationInterpolator = null;
+    }
+
+    public void setViewportBounds(RectF bounds) {
+        mViewPortBounds = bounds;
+    }
+
+    public void doBoundsCheck() {
+        if(mViewPortBounds != null) {
+            RectF newViewport = getDisplayViewPort();
+            if(newViewport.width() > mViewPortBounds.width()){
+                newViewport.left = mViewPortBounds.left;
+                newViewport.right = mViewPortBounds.right;
+            }
+            if(newViewport.height() > mViewPortBounds.height()){
+                newViewport.top = mViewPortBounds.top;
+                newViewport.bottom = mViewPortBounds.bottom;
+            }
+            if(newViewport.left < mViewPortBounds.left) {
+                newViewport.offset(mViewPortBounds.left - newViewport.left, 0);
+            }
+            if(newViewport.right > mViewPortBounds.right) {
+                newViewport.offset(mViewPortBounds.right - newViewport.right, 0);
+            }
+            if(newViewport.bottom > mViewPortBounds.bottom) {
+                newViewport.offset(0, mViewPortBounds.bottom - newViewport.bottom);
+            }
+            if(newViewport.top < mViewPortBounds.top) {
+                newViewport.offset(0, mViewPortBounds.top - newViewport.top);
+            }
+
+            mAnimationInterpolator = new DecelerateInterpolator();
+            mAnimationEndTime = System.currentTimeMillis() + mAnimationTime;
+            mAnimationDest = newViewport;
+            invalidate();
+        }
+    }
 
 	public RectF getDisplayViewPort(){
 		RectF rect = new RectF(0,0,mGraphArea.width(), mGraphArea.height());
@@ -222,7 +291,7 @@ public class GraphView extends View {
 	
 	@Override
 	protected void onDraw(Canvas canvas) {
-		
+        doAnimation();
 		if(mFrontBuffer != null){
 			canvas.save();
 			canvas.translate(mGraphArea.left, mGraphArea.top);
@@ -446,6 +515,7 @@ public class GraphView extends View {
 	}
 
 	public void zoomInCenter() {
+        cancelAnimation();
 		float scale = 1.3f;
 		mTransformMatrix.postScale(scale, scale, getMeasuredWidth()/2, getMeasuredHeight()/2);
 		invalidate();
@@ -453,10 +523,19 @@ public class GraphView extends View {
 	}
 
 	public void zoomOutCenter() {
+        cancelAnimation();
 		float scale = 0.7f;
 		mTransformMatrix.postScale(scale, scale, getMeasuredWidth()/2, getMeasuredHeight()/2);
 		invalidate();
 		updateViewport();
+        new Handler(Looper.getMainLooper()).postDelayed(new Runnable(){
+
+            @Override
+            public void run() {
+                doBoundsCheck();
+            }
+        }, 1000);
+
 	}
 
 	private ZoomButtonsController.OnZoomListener mZoomButtonListener = new ZoomButtonsController.OnZoomListener(){
