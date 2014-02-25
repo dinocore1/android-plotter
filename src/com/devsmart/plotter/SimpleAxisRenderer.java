@@ -3,14 +3,12 @@ package com.devsmart.plotter;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.Matrix.ScaleToFit;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.graphics.Matrix.ScaleToFit;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
-
-import com.devsmart.MathUtils;
 
 public class SimpleAxisRenderer implements AxisRenderer {
 
@@ -25,7 +23,20 @@ public class SimpleAxisRenderer implements AxisRenderer {
 	String mYAxisLabel = "Intensity";
 	
 	DisplayMetrics mDisplayMetrics;
-	
+
+    public SimpleAxisRenderer(GraphView graphview,int axisColor, int lableColor) {
+        mDisplayMetrics = graphview.getContext().getResources().getDisplayMetrics();
+
+        mAxisLabelPaint.setColor(axisColor/*Color.BLACK*/);
+        mAxisLabelPaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 15, mDisplayMetrics));
+        mAxisLabelPaint.setAntiAlias(true);
+
+        mAxisTickPaint.setColor(lableColor/*Color.DKGRAY*/);
+        mAxisTickPaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10, mDisplayMetrics));
+        mAxisTickPaint.setAntiAlias(true);
+
+    }
+
 	public SimpleAxisRenderer(GraphView graphview) {
 		mDisplayMetrics = graphview.getContext().getResources().getDisplayMetrics();
 		
