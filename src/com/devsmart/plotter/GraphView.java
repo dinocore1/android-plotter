@@ -90,11 +90,14 @@ public class GraphView extends View {
         try {
              axisColor  = a.getInteger(R.styleable.GraphView_axisColor, Color.BLACK);
              labelColor  = a.getInteger(R.styleable.GraphView_axisColor, Color.DKGRAY);
-        } finally {
+            init(axisColor,labelColor);
+        }catch (Exception e){
+            init();
+        }finally {
             a.recycle();
         }
 
-		init(axisColor,labelColor);
+
 	}
 
 	private void init() {
