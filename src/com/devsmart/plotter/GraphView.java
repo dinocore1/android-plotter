@@ -69,7 +69,7 @@ public class GraphView extends View {
 	
 	protected AxisRenderer mAxisRenderer;
 
-	private ZoomButtonsController mZoomControls;
+	//private ZoomButtonsController mZoomControls;
 	private Rect mGraphArea;
     private RectF mViewPortBounds;
 
@@ -131,9 +131,9 @@ public class GraphView extends View {
         mAxisLabelPaint.setAntiAlias(true);
         mBackgroundColor = Color.WHITE;
 
-        mZoomControls = new ZoomButtonsController(this);
-        mZoomControls.setAutoDismissed(true);
-        mZoomControls.setOnZoomListener(mZoomButtonListener);
+        //mZoomControls = new ZoomButtonsController(this);
+        //mZoomControls.setAutoDismissed(true);
+        //mZoomControls.setOnZoomListener(mZoomButtonListener);
     }
 	
 
@@ -168,14 +168,14 @@ public class GraphView extends View {
 	@Override
 	protected void onDetachedFromWindow() {
 		super.onDetachedFromWindow();
-		mZoomControls.setVisible(false);
+		//mZoomControls.setVisible(false);
 	}
 	
 	@Override
 	protected void onVisibilityChanged(View changedView, int visibility) {
 		super.onVisibilityChanged(changedView, visibility);
 		if(visibility != View.VISIBLE){
-			mZoomControls.setVisible(false);
+			//mZoomControls.setVisible(false);
 		}
 	}
 
@@ -205,7 +205,7 @@ public class GraphView extends View {
 	public boolean onTouchEvent(MotionEvent event) {
 
         cancelAnimation();
-		mZoomControls.setVisible(true);
+		//mZoomControls.setVisible(true);
 
 		final int action = MotionEventCompat.getActionMasked(event);
 		switch(action){
