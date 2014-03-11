@@ -10,6 +10,8 @@ import android.graphics.RectF;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
 
+import java.math.BigDecimal;
+
 public class SimpleAxisRenderer implements AxisRenderer {
 
 	int numDivisions = 5;
