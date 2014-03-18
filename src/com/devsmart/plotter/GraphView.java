@@ -1,18 +1,11 @@
 package com.devsmart.plotter;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
-import android.graphics.Matrix.ScaleToFit;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -22,8 +15,6 @@ import android.os.Looper;
 import android.os.Parcelable;
 import android.support.v4.view.MotionEventCompat;
 import android.util.AttributeSet;
-import android.util.DisplayMetrics;
-import android.util.TypedValue;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
@@ -32,6 +23,13 @@ import android.view.animation.Interpolator;
 import android.widget.ZoomButtonsController;
 
 import com.devsmart.BackgroundTask;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class GraphView extends View {
 
@@ -71,45 +69,58 @@ public class GraphView extends View {
 	
 	protected AxisRenderer mAxisRenderer;
 
-	private ZoomButtonsController mZoomControls;
+	//private ZoomButtonsController mZoomControls;
 	private Rect mGraphArea;
     private RectF mViewPortBounds;
 
 	public GraphView(Context context) {
-		super(context);
-		init();
+        super(context);
+        mAxisRenderer = new SimpleAxisRenderer(getContext());
+        init();
 	}
 
 	public GraphView(Context context, AttributeSet attrs) {
 		super(context, attrs);
-		init();
+
+        TypedArray a = context.getTheme().obtainStyledAttributes(
+                attrs,
+                R.styleable.GraphView,
+                0, 0);
+
+        SimpleAxisRenderer axisRenderer = new SimpleAxisRenderer(getContext());
+
+        axisRenderer.mAxisTickPaint.setColor(a.getInteger(R.styleable.GraphView_axisColor, Color.BLACK));
+        axisRenderer.mAxisLabelPaint.setColor(a.getInteger(R.styleable.GraphView_axisColor, Color.DKGRAY));
+
+        a.recycle();
+
+        mAxisRenderer = axisRenderer;
+        init();
 	}
 
-	private void init() {
-		mAxisRenderer = new SimpleAxisRenderer(getContext());
-		mPanGestureDetector = new GestureDetector(mSimpleGestureListener);
-		mScaleGestureDetector = new XYScaleGestureDetector(getContext(), mSimpleScaleGestureListener);
-		mDrawPaint.setFilterBitmap(true);
-		mViewPort.set(0, 0, 1, 1);
-		mTransformMatrix.reset();
+    private void init(){
+        mPanGestureDetector = new GestureDetector(mSimpleGestureListener);
+        mScaleGestureDetector = new XYScaleGestureDetector(getContext(), mSimpleScaleGestureListener);
+        mDrawPaint.setFilterBitmap(true);
+        mViewPort.set(0, 0, 1, 1);
+        mTransformMatrix.reset();
 
-		//defaults
-		mDrawXAxis = true;
-		mXAxisDevision = 1.0f;
-		mDrawYAxis = true;
-		mYAxisDevision = 1.0f;
-		mPlotMargins.set(20, 0, 0, 20);
-		mAxisColor = Color.DKGRAY;
-		mAxisLabelPaint.setColor(Color.DKGRAY);
-		mAxisLabelPaint.setTextSize(15.0f);
-		mAxisLabelPaint.setAntiAlias(true);
-		mBackgroundColor = Color.WHITE;
+        //defaults
+        mDrawXAxis = true;
+        mXAxisDevision = 1.0f;
+        mDrawYAxis = true;
+        mYAxisDevision = 1.0f;
+        mPlotMargins.set(20, 0, 0, 20);
+        mAxisColor = Color.DKGRAY;
+        mAxisLabelPaint.setColor(Color.DKGRAY);
+        mAxisLabelPaint.setTextSize(15.0f);
+        mAxisLabelPaint.setAntiAlias(true);
+        mBackgroundColor = Color.WHITE;
 
-		mZoomControls = new ZoomButtonsController(this);
-		mZoomControls.setAutoDismissed(true);
-		mZoomControls.setOnZoomListener(mZoomButtonListener);
-
-	}
+        //mZoomControls = new ZoomButtonsController(this);
+        //mZoomControls.setAutoDismissed(true);
+        //mZoomControls.setOnZoomListener(mZoomButtonListener);
+    }
 	
 
 
@@ -143,14 +154,14 @@ public class GraphView extends View {
 	@Override
 	protected void onDetachedFromWindow() {
 		super.onDetachedFromWindow();
-		mZoomControls.setVisible(false);
+		//mZoomControls.setVisible(false);
 	}
 	
 	@Override
 	protected void onVisibilityChanged(View changedView, int visibility) {
 		super.onVisibilityChanged(changedView, visibility);
 		if(visibility != View.VISIBLE){
-			mZoomControls.setVisible(false);
+			//mZoomControls.setVisible(false);
 		}
 	}
 
@@ -180,7 +191,7 @@ public class GraphView extends View {
 	public boolean onTouchEvent(MotionEvent event) {
 
         cancelAnimation();
-		mZoomControls.setVisible(true);
+		//mZoomControls.setVisible(true);
 
 		final int action = MotionEventCompat.getActionMasked(event);
 		switch(action){

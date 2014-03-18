@@ -4,14 +4,12 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.Matrix.ScaleToFit;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.graphics.Matrix.ScaleToFit;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
-
-import com.devsmart.MathUtils;
 
 public class SimpleAxisRenderer implements AxisRenderer {
 
@@ -20,8 +18,8 @@ public class SimpleAxisRenderer implements AxisRenderer {
 	boolean mDrawYAxis = true;
 	int mAxisColor = Color.BLACK;
 	Rect mPlotMargins = new Rect(20, 0, 0, 20);
-	Paint mAxisLabelPaint = new Paint();
-	Paint mAxisTickPaint = new Paint();
+	public Paint mAxisLabelPaint = new Paint();
+	public Paint mAxisTickPaint = new Paint();
 	String mXAxisLabel = "Wavelength";
 	String mYAxisLabel = "Intensity";
 	
@@ -29,16 +27,16 @@ public class SimpleAxisRenderer implements AxisRenderer {
 	
 	public SimpleAxisRenderer(Context context) {
 		mDisplayMetrics = context.getResources().getDisplayMetrics();
-		
-		mAxisLabelPaint.setColor(Color.BLACK);
-		mAxisLabelPaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 15, mDisplayMetrics));
-		mAxisLabelPaint.setAntiAlias(true);
-		
-		mAxisTickPaint.setColor(Color.DKGRAY);
-		mAxisTickPaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10, mDisplayMetrics));
-		mAxisTickPaint.setAntiAlias(true);
-		
-	}
+
+        mAxisLabelPaint.setColor(Color.BLACK);
+        mAxisLabelPaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 15, mDisplayMetrics));
+        mAxisLabelPaint.setAntiAlias(true);
+
+        mAxisTickPaint.setColor(Color.DKGRAY);
+        mAxisTickPaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10, mDisplayMetrics));
+        mAxisTickPaint.setAntiAlias(true);
+
+    }
 	
 	private float[] mYAxis;
 	private float[] mXAxis;
