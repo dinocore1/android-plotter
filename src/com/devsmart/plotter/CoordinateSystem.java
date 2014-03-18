@@ -78,7 +78,7 @@ public class CoordinateSystem {
 		return mInverse;
 	}
 	
-	void interpolate(RectF from, RectF to){
+	public void interpolate(RectF from, RectF to){
 		mXAxisFunction.interpolate(new float[]{from.left, from.right}, new float[]{to.left, to.right});
 		mYAxisFunction.interpolate(new float[]{from.top, from.bottom}, new float[]{to.top, to.bottom});
 	}

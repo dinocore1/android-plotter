@@ -1,5 +1,6 @@
 package com.devsmart.plotter;
 
+import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
@@ -26,8 +27,8 @@ public class SimpleAxisRenderer implements AxisRenderer {
 	
 	DisplayMetrics mDisplayMetrics;
 	
-	public SimpleAxisRenderer(GraphView graphview) {
-		mDisplayMetrics = graphview.getContext().getResources().getDisplayMetrics();
+	public SimpleAxisRenderer(Context context) {
+		mDisplayMetrics = context.getResources().getDisplayMetrics();
 		
 		mAxisLabelPaint.setColor(Color.BLACK);
 		mAxisLabelPaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 15, mDisplayMetrics));

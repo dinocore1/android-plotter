@@ -86,7 +86,7 @@ public class GraphView extends View {
 	}
 
 	private void init() {
-		mAxisRenderer = new SimpleAxisRenderer(this);
+		mAxisRenderer = new SimpleAxisRenderer(getContext());
 		mPanGestureDetector = new GestureDetector(mSimpleGestureListener);
 		mScaleGestureDetector = new XYScaleGestureDetector(getContext(), mSimpleScaleGestureListener);
 		mDrawPaint.setFilterBitmap(true);
@@ -309,15 +309,12 @@ public class GraphView extends View {
 		BackgroundTask.runBackgroundTask(mBackgroundDrawTask, mDrawThread);
 	}
 
-    public static Bitmap drawBitmap(int width, int height, List<DataRenderer> data,
+    public static void drawBitmap(Canvas c, int width, int height, List<DataRenderer> data,
                                     RectF viewport,
                                     CoordinateSystem coordinateSystem) {
 
         CoordinateSystem mCoordCopy = coordinateSystem.copy();
         mCoordCopy.interpolate(viewport, new RectF(0,0,width,height));
-
-        Bitmap drawBuffer = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_4444);
-        Canvas c = new Canvas(drawBuffer);
 
         try {
             c.save();
@@ -330,7 +327,6 @@ public class GraphView extends View {
         }finally {
             c.restore();
         }
-        return drawBuffer;
     }
 
 	private class BackgroundDrawTask extends BackgroundTask {
