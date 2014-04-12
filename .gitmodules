@@ -1,0 +1,3 @@
+[submodule "AndroidEssentials"]
+	path = AndroidEssentials
+	url = git@github.com:dinocore1/AndroidEssentials.git

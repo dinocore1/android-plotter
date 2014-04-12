@@ -1,2 +1,2 @@
-include ':plotter'
+include ':plotter', ':app', ':AndroidEssentials'
 
