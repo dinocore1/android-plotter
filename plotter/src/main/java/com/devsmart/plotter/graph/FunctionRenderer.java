@@ -14,7 +14,8 @@ public class FunctionRenderer implements DataRenderer {
     public Function mGraphFunction;
     public Paint mPathPaint;
 
-    public FunctionRenderer(int lineColor, float lineWidth) {
+    public FunctionRenderer(Function graphFunction, int lineColor, float lineWidth) {
+        mGraphFunction = graphFunction;
         mPathPaint = new Paint();
         mPathPaint.setColor(lineColor);
         mPathPaint.setStrokeWidth(lineWidth);

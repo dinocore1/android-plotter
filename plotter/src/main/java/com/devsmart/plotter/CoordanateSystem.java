@@ -4,38 +4,76 @@ import android.graphics.RectF;
 
 public class CoordanateSystem {
 
-    public static class Axis {
+    public static abstract class Axis {
         public Function toScreen;
         public Function fromScreen;
+
+        public abstract void interpolate(double[] from, double[] to);
+        public abstract Axis copy();
     }
 
     public Axis xAxis;
     public Axis yAxis;
 
-    public static class LinearFunction implements Function {
+    public CoordanateSystem copy() {
+        CoordanateSystem retval = new CoordanateSystem();
+        retval.xAxis = xAxis.copy();
+        retval.yAxis = yAxis.copy();
+        return retval;
+    }
 
-        private final double mSlope;
-        private final double mYOffset;
+    public static class LinearAxis extends Axis {
 
-        public LinearFunction(double[] from, double[] to) {
-            mSlope = (from[1]-to[1]) / (from[0]-to[0]);
-            mYOffset = to[1] - mSlope*to[0];
+        public static class LinearFunction implements Function {
+
+            double mSlope;
+            double mYOffset;
+
+            public LinearFunction() {}
+            public LinearFunction(LinearFunction function) {
+                mSlope = function.mSlope;
+                mYOffset = function.mYOffset;
+            }
+
+            void interpolate(double[] from, double[] to) {
+                mSlope = (from[1]-to[1]) / (from[0]-to[0]);
+                mYOffset = to[1] - mSlope*to[0];
+            }
+
+            @Override
+            public double value(double x) {
+                return mSlope*x + mYOffset;
+            }
+        }
+
+        public LinearAxis() {
+            toScreen = new LinearFunction();
+            fromScreen = new LinearFunction();
         }
 
         @Override
-        public double value(double x) {
-            return mSlope*x + mYOffset;
+        public void interpolate(double[] from, double[] to) {
+            ((LinearFunction)toScreen).interpolate(from, to);
+            ((LinearFunction)fromScreen).mSlope = 1/((LinearFunction) toScreen).mSlope;
+            ((LinearFunction) fromScreen).mYOffset = -((LinearFunction) fromScreen).mYOffset / ((LinearFunction) fromScreen).mSlope;
+        }
+
+        @Override
+        public Axis copy() {
+            LinearAxis retval = new LinearAxis();
+            retval.toScreen = new LinearFunction((LinearFunction) toScreen);
+            retval.fromScreen = new LinearFunction((LinearFunction)fromScreen);
+
+            return retval;
         }
     }
 
 
-    public static CoordanateSystem linearSystem(RectF viewPort, RectF screen) {
+    public static CoordanateSystem linearSystem() {
         CoordanateSystem retval = new CoordanateSystem();
 
-        retval.xAxis.toScreen = new LinearFunction(new double[]{viewPort.right, screen.right}, new double[]{viewPort.left, screen.left});
-        retval.xAxis.fromScreen = new LinearFunction(new double[]{screen.right, viewPort.right}, new double[]{screen.left, viewPort.left});
-        retval.yAxis.toScreen = new LinearFunction(new double[]{viewPort.bottom, screen.bottom}, new double[]{viewPort.top, screen.top});
-        retval.yAxis.fromScreen = new LinearFunction(new double[]{screen.bottom, viewPort.bottom}, new double[]{screen.top, viewPort.top});
+        retval.xAxis = new LinearAxis();
+        retval.yAxis = new LinearAxis();
 
         return retval;
     }
