@@ -19,6 +19,7 @@ public class FunctionRenderer implements DataRenderer {
         mPathPaint = new Paint();
         mPathPaint.setColor(lineColor);
         mPathPaint.setStrokeWidth(lineWidth);
+        mPathPaint.setStyle(Paint.Style.STROKE);
     }
 
     @Override

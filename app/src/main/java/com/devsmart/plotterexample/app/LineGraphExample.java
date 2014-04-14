@@ -29,7 +29,8 @@ public class LineGraphExample extends Activity {
         return new FunctionRenderer(new Function() {
             @Override
             public double value(double x) {
-                return 3 * Math.sin(x);
+                //return Math.sin(x);
+                return x;
             }
         }, Color.GREEN, 2.0f);
     }

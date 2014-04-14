@@ -55,7 +55,7 @@ public class CoordanateSystem {
         public void interpolate(double[] from, double[] to) {
             ((LinearFunction)toScreen).interpolate(from, to);
             ((LinearFunction)fromScreen).mSlope = 1/((LinearFunction) toScreen).mSlope;
-            ((LinearFunction) fromScreen).mYOffset = -((LinearFunction) fromScreen).mYOffset / ((LinearFunction) fromScreen).mSlope;
+            ((LinearFunction)fromScreen).mYOffset = -((LinearFunction) toScreen).mYOffset / ((LinearFunction) toScreen).mSlope;
         }
 
         @Override

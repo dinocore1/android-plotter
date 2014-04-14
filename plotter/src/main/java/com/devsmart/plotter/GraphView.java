@@ -58,6 +58,9 @@ public class GraphView extends View {
 		mTransformMatrix.reset();
         mCoordanateSyste = CoordanateSystem.linearSystem();
 
+        mCoordanateSyste.xAxis.interpolate(new double[]{-1, 0}, new double[]{1, 480});
+        mCoordanateSyste.yAxis.interpolate(new double[]{-1, 0}, new double[]{1, 800});
+
 	}
 
 	@Override
@@ -137,10 +140,16 @@ public class GraphView extends View {
 			mBackgroundDrawTask.mCanceled = true;
 		}
 
-        RectF newViewPort = new RectF(mViewPort);
-        Matrix invertMatrix = new Matrix();
-        mTransformMatrix.invert(invertMatrix);
-        invertMatrix.mapRect(newViewPort);
+        RectF newViewPort = new RectF(0, 0, getMeasuredWidth(), getMeasuredHeight());
+        Matrix matrix = new Matrix();
+        mTransformMatrix.invert(matrix);
+        matrix.mapRect(newViewPort);
+
+        newViewPort.left = (float) mCoordanateSyste.xAxis.fromScreen.value(newViewPort.left);
+        newViewPort.right = (float) mCoordanateSyste.xAxis.fromScreen.value(newViewPort.right);
+        newViewPort.top = (float) mCoordanateSyste.yAxis.fromScreen.value(newViewPort.top);
+        newViewPort.bottom = (float) mCoordanateSyste.yAxis.fromScreen.value(newViewPort.bottom);
+
 
 		mBackgroundDrawTask = new BackgroundDrawTask(getMeasuredWidth(), getMeasuredHeight(), newViewPort);
 		BackgroundTask.runBackgroundTask(mBackgroundDrawTask, mDrawThread);
