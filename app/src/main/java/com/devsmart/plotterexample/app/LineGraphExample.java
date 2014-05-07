@@ -28,7 +28,7 @@ public class LineGraphExample extends Activity {
     private FunctionRenderer createSinFunction() {
         return new FunctionRenderer(new Function() {
             @Override
-            public double value(double x) {
+            public float value(float x) {
                 //return Math.sin(x);
                 return x;
             }

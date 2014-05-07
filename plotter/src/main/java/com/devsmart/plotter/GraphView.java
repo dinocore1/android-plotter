@@ -16,6 +16,8 @@ import android.view.View;
 import android.widget.ZoomButtonsController;
 
 import com.devsmart.BackgroundTask;
+import com.devsmart.plotter.axis.Axis;
+import com.devsmart.plotter.axis.LinearAxis;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -37,7 +39,8 @@ public class GraphView extends View {
 	private BackgroundDrawTask mBackgroundDrawTask;
 	private GestureDetector mPanGestureDetector;
 	private XYScaleGestureDetector mScaleGestureDetector;
-    private CoordanateSystem mCoordanateSyste;
+    private Axis mXAxis;
+    private Axis mYAxis;
 
 
 	public GraphView(Context context) {
@@ -54,56 +57,34 @@ public class GraphView extends View {
 		mPanGestureDetector = new GestureDetector(mSimpleGestureListener);
 		mScaleGestureDetector = new XYScaleGestureDetector(getContext(), mSimpleScaleGestureListener);
 		mDrawPaint.setFilterBitmap(true);
-		mViewPort.set(-1, -1, 1, 1);
+		mViewPort.set(0, 1, 1, 0);
 		mTransformMatrix.reset();
-        mCoordanateSyste = CoordanateSystem.linearSystem();
-
-        mCoordanateSyste.xAxis.interpolate(new double[]{-1, 0}, new double[]{1, 480});
-        mCoordanateSyste.yAxis.interpolate(new double[]{-1, 0}, new double[]{1, 800});
-
+        mXAxis = new LinearAxis();
+        mYAxis = new LinearAxis();
 	}
 
-	@Override
-	protected Parcelable onSaveInstanceState() {
-		
-		Bundle retval = new Bundle();
-		retval.putParcelable(KEY_SUPERINSTANCE, super.onSaveInstanceState());
+    public void setXAxis(Axis axis) {
+        mXAxis = axis;
+    }
 
-		float[] viewportvalues = new float[4];
-		viewportvalues[0] = mViewPort.left;
-		viewportvalues[1] = mViewPort.top;
-		viewportvalues[2] = mViewPort.right;
-		viewportvalues[3] = mViewPort.bottom;
-		retval.putFloatArray(KEY_VIEWPORT, viewportvalues);
-		return retval;
-	}
-
-	protected void onRestoreInstanceState (Parcelable state) {
-		Bundle bundle = (Bundle) state;
-		super.onRestoreInstanceState(bundle.getParcelable(KEY_SUPERINSTANCE));
-
-		float[] viewportvalues = bundle.getFloatArray(KEY_VIEWPORT);
-		mViewPort.left = viewportvalues[0];
-		mViewPort.top = viewportvalues[1];
-		mViewPort.right = viewportvalues[2];
-		mViewPort.bottom = viewportvalues[3];
-		drawFrame();
-	}
+    public void setYAxis(Axis axis) {
+        mYAxis = axis;
+    }
 
 	public void addSeries(DataRenderer data) {
 		mSeries.add(data);
-		drawFrame();
+		drawFrame(getViewport());
 	}
 
 	public void removeSeries(DataRenderer data) {
 		mSeries.remove(data);
-		drawFrame();
+		drawFrame(getViewport());
 	}
 
 	@Override
 	protected void onSizeChanged(int w, int h, int oldw, int oldh) {
 		super.onSizeChanged(w, h, oldw, oldh);
-		drawFrame();
+		drawFrame(getViewport());
 	}
 
 	@Override
@@ -122,9 +103,8 @@ public class GraphView extends View {
 	}
 	
 	public void setDisplayViewPort(RectF viewport) {
-        mViewPort = viewport;
         mTransformMatrix.reset();
-		drawFrame();
+		drawFrame(viewport);
 	}
 
 
@@ -135,50 +115,99 @@ public class GraphView extends View {
 		}
 	}
 
-	private void drawFrame() {
+    public void setViewport(RectF viewport){
+        drawFrame(viewport);
+    }
+
+    public RectF getViewport() {
+        RectF rect = new RectF(0,0,getMeasuredWidth(),getMeasuredHeight());
+        Matrix inverse = new Matrix();
+        mTransformMatrix.invert(inverse);
+        mTransformMatrix.mapRect(rect);
+
+        float[] src = new float[8];
+        src[0] = rect.left;
+        src[1] = rect.bottom;
+        src[2] = rect.right;
+        src[3] = rect.bottom;
+        src[4] = rect.left;
+        src[5] = rect.top;
+        src[6] = rect.right;
+        src[7] = rect.top;
+
+        float[] dest = new float[8];
+        dest[0] = mViewPort.left;
+        dest[1] = mViewPort.top;
+        dest[2] = mViewPort.right;
+        dest[3] = mViewPort.top;
+        dest[4] = mViewPort.left;
+        dest[5] = mViewPort.bottom;
+        dest[6] = mViewPort.right;
+        dest[7] = mViewPort.bottom;
+
+        inverse.setPolyToPoly(src, 0, dest, 0, 4);
+        inverse.mapRect(rect);
+
+        rect.left = mXAxis.fromLinearUnit(rect.left);
+        rect.right = mXAxis.fromLinearUnit(rect.right);
+        rect.top = mYAxis.fromLinearUnit(rect.top);
+        rect.bottom = mYAxis.fromLinearUnit(rect.bottom);
+
+        return rect;
+    }
+
+	private void drawFrame(RectF viewport) {
 		if(mBackgroundDrawTask != null){
 			mBackgroundDrawTask.mCanceled = true;
 		}
 
-        RectF newViewPort = new RectF(0, 0, getMeasuredWidth(), getMeasuredHeight());
-        Matrix matrix = new Matrix();
-        mTransformMatrix.invert(matrix);
-        matrix.mapRect(newViewPort);
-
-        newViewPort.left = (float) mCoordanateSyste.xAxis.fromScreen.value(newViewPort.left);
-        newViewPort.right = (float) mCoordanateSyste.xAxis.fromScreen.value(newViewPort.right);
-        newViewPort.top = (float) mCoordanateSyste.yAxis.fromScreen.value(newViewPort.top);
-        newViewPort.bottom = (float) mCoordanateSyste.yAxis.fromScreen.value(newViewPort.bottom);
-
-
-		mBackgroundDrawTask = new BackgroundDrawTask(getMeasuredWidth(), getMeasuredHeight(), newViewPort);
+		mBackgroundDrawTask = new BackgroundDrawTask(viewport);
 		BackgroundTask.runBackgroundTask(mBackgroundDrawTask, mDrawThread);
 	}
 
 	private class BackgroundDrawTask extends BackgroundTask {
 
-		private int width;
+        private final MultivariateFunction mToScreen;
+        private int width;
 		private int height;
 		private Bitmap mDrawBuffer;
 		private boolean mCanceled = false;
 		private final RectF viewport;
 
-		public BackgroundDrawTask(int width, int height, RectF viewport){
-			this.width = width;
-			this.height = height;
+		public BackgroundDrawTask(RectF viewport){
+			this.width = getMeasuredWidth();
+			this.height = getMeasuredHeight();
 			this.viewport = viewport;
-		}
+
+            final Matrix toScreenMatrix = new Matrix();
+            toScreenMatrix.setPolyToPoly(
+                    new float[]{mXAxis.toLinearUnit(viewport.left), mYAxis.toLinearUnit(viewport.bottom), mXAxis.toLinearUnit(viewport.right), mYAxis.toLinearUnit(viewport.top)}, 0,
+                    new float[]{0,height,width,0},0,
+                    2);
+
+            mToScreen = new MultivariateFunction() {
+
+                float[] point = new float[2];
+
+                @Override
+                public float[] value(float[] frompoint) {
+                    point[0] = mXAxis.toLinearUnit(frompoint[0]);
+                    point[1] = mYAxis.toLinearUnit(frompoint[1]);
+                    toScreenMatrix.mapPoints(point);
+                    return point;
+                }
+            };
+
+
+        }
 
 		@Override
 		public void onBackground() {
 			if(!mCanceled){
-                CoordanateSystem coordanateSystem = mCoordanateSyste.copy();
-                coordanateSystem.xAxis.interpolate(new double[]{viewport.left, 0}, new double[]{viewport.right, width});
-                coordanateSystem.yAxis.interpolate(new double[]{viewport.bottom, 0}, new double[]{viewport.top, height});
 				mDrawBuffer = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
                 Canvas canvas = new Canvas(mDrawBuffer);
                 for(DataRenderer r : mSeries){
-                    r.draw(canvas, mViewPort, coordanateSystem);
+                    r.draw(canvas, viewport, mToScreen);
                 }
 
 			}
@@ -211,7 +240,7 @@ public class GraphView extends View {
 		public boolean onDoubleTap(MotionEvent e) {
 			//autoScaleDomainAndRange();
 			mTransformMatrix.postScale(1.3f, 1.3f, e.getX(), e.getY());
-            drawFrame();
+            drawFrame(getViewport());
 			invalidate();
 			return true;
 		}
@@ -219,7 +248,7 @@ public class GraphView extends View {
 		@Override
 		public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
 			mTransformMatrix.postTranslate(-distanceX, -distanceY);
-            drawFrame();
+            drawFrame(getViewport());
 			invalidate();
 			return true;
 		}
@@ -232,7 +261,7 @@ public class GraphView extends View {
 		public boolean onScale(XYScaleGestureDetector detector) {
 			
 			mTransformMatrix.postScale(detector.getXScaleFactor(), detector.getYScaleFactor(), detector.getFocusX(), detector.getFocusY());
-            drawFrame();
+            drawFrame(getViewport());
 			invalidate();
 			return true;
 
@@ -244,14 +273,14 @@ public class GraphView extends View {
 	public void zoomInCenter() {
 		float scale = 1.3f;
 		mTransformMatrix.postScale(scale, scale, getMeasuredWidth()/2, getMeasuredHeight()/2);
-        drawFrame();
+        drawFrame(getViewport());
 		invalidate();
 	}
 
 	public void zoomOutCenter() {
 		float scale = 0.7f;
 		mTransformMatrix.postScale(scale, scale, getMeasuredWidth()/2, getMeasuredHeight()/2);
-        drawFrame();
+        drawFrame(getViewport());
 		invalidate();
 	}
 
