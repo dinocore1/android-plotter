@@ -225,6 +225,9 @@ public class XYScaleGestureDetector {
             break;
             
             case MotionEvent.ACTION_MOVE:
+                if(event.getPointerCount() < 2){
+                    return false;
+                }
                 if (mSloppyGesture) {
                     // Initiate sloppy gestures if we've moved outside of the slop area.
                     final float edgeSlop = mEdgeSlop;

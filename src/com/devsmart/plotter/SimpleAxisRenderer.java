@@ -51,6 +51,16 @@ public class SimpleAxisRenderer implements AxisRenderer {
 		mAxisTickPaint.setAntiAlias(true);
 		
 	}
+
+    @Override
+    public void setYAxisLabel(String label){
+        mYAxisLabel = label;
+    }
+
+    @Override
+    public void setXAxisLabel(String label) {
+        mXAxisLabel = label;
+    }
 	
 	private float[] mYAxis;
 	private float[] mXAxis;

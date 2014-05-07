@@ -109,9 +109,8 @@ public class GraphView extends View {
     private void init(int axisColor,int labelColor) {
         mAxisRenderer = new SimpleAxisRenderer(this,axisColor,labelColor);
         setUp();
-
-
     }
+
     private void setUp(){
         mPanGestureDetector = new GestureDetector(mSimpleGestureListener);
         mScaleGestureDetector = new XYScaleGestureDetector(getContext(), mSimpleScaleGestureListener);
@@ -135,7 +134,10 @@ public class GraphView extends View {
         //mZoomControls.setAutoDismissed(true);
         //mZoomControls.setOnZoomListener(mZoomButtonListener);
     }
-	
+
+    public AxisRenderer getAxisRenderer() {
+        return mAxisRenderer;
+    }
 
 
 	@Override
