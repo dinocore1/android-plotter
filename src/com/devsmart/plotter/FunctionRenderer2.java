@@ -24,6 +24,10 @@ public class FunctionRenderer2 implements DataRenderer {
         mPaint.setStyle(Paint.Style.STROKE);
     }
 
+    private static boolean isRealNumber(float f) {
+        return !Float.isNaN(f) && !Float.isInfinite(f);
+    }
+
     @Override
     public void draw(Canvas canvas, RectF viewPort, CoordinateSystem coordSystem) {
 
@@ -38,10 +42,12 @@ public class FunctionRenderer2 implements DataRenderer {
             points[1] = (float)y;
 
             coordSystem.mapPoints(points);
-            if(x == viewPort.left){
-                p.moveTo(points[0], points[1]);
-            } else {
-                p.lineTo(points[0], points[1]);
+            if(isRealNumber(points[0]) && isRealNumber(points[1])) {
+                if (x == viewPort.left) {
+                    p.moveTo(points[0], points[1]);
+                } else {
+                    p.lineTo(points[0], points[1]);
+                }
             }
         }
 
