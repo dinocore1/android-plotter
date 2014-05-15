@@ -24,7 +24,7 @@ public class FunctionRenderer2 implements DataRenderer {
         mPaint.setStyle(Paint.Style.STROKE);
     }
 
-    private static boolean isRealNumber(float f) {
+    public static boolean isRealNumber(float f) {
         return !Float.isNaN(f) && !Float.isInfinite(f);
     }
 
@@ -51,8 +51,6 @@ public class FunctionRenderer2 implements DataRenderer {
             }
         }
 
-        //p.close();
         canvas.drawPath(p, mPaint);
-
     }
 }

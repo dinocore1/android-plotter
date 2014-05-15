@@ -23,6 +23,7 @@ public class FunctionRenderer implements DataRenderer {
         mPointPaint.setColor(color);
         mPointPaint.setStrokeWidth(2.0f);
         mPointPaint.setAntiAlias(true);
+        mPointPaint.setStyle(Paint.Style.STROKE);
     }
 	
 	public FunctionRenderer(GraphFunction f, double samplerate, int color) {
@@ -31,6 +32,7 @@ public class FunctionRenderer implements DataRenderer {
 		mPointPaint.setColor(color);
 		mPointPaint.setStrokeWidth(2.0f);
         mPointPaint.setAntiAlias(true);
+        mPointPaint.setStyle(Paint.Style.STROKE);
 	}
 
 
@@ -48,12 +50,11 @@ public class FunctionRenderer implements DataRenderer {
         final double stepWidth = Math.min(pixelWidth, 1.0/mSampleRate);
 
         Path p = new Path();
-        p.moveTo(0, 0);
 
         points[0] = viewPort.left;
         points[1] = (float)mFunction.value(viewPort.left);
         coordSystem.mapPoints(points);
-        p.lineTo(points[0], points[1]);
+        p.moveTo(points[0], points[1]);
 
         double startPix = viewPort.left;
         for(double x=startPix;x<viewPort.right;x+=stepWidth) {
@@ -88,10 +89,6 @@ public class FunctionRenderer implements DataRenderer {
         points[1] = (float)mFunction.value(viewPort.right);
         coordSystem.mapPoints(points);
         p.lineTo(points[0], points[1]);
-
-        p.lineTo(canvas.getWidth(), 0);
-
-        p.close();
 
         canvas.drawPath(p, mPointPaint);
     }
@@ -141,8 +138,6 @@ public class FunctionRenderer implements DataRenderer {
 
         Path p = new Path();
         Path p2 = new Path();
-
-        p.moveTo(0, 0);
 
         points[0] = (float) mSampleLocations[sampleindex];
         points[1] = (float)mFunction.value(points[0]);
