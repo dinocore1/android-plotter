@@ -312,8 +312,11 @@ public class GraphView extends View {
 	public void setDisplayViewPort(RectF viewport) {
 		mTransformMatrix.reset();
 		mViewPort = new RectF(viewport);
-		mCoordinateSystem.interpolate(mViewPort, new RectF(0,0,mGraphArea.width(), mGraphArea.height()));
-		drawFrame(viewport);
+
+        if(mGraphArea != null) {
+            mCoordinateSystem.interpolate(mViewPort, new RectF(0, 0, mGraphArea.width(), mGraphArea.height()));
+            drawFrame(viewport);
+        }
 	}
 	
 	@Override
