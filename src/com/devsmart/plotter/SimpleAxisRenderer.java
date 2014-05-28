@@ -11,6 +11,8 @@ import android.graphics.RectF;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
 
+import java.math.BigDecimal;
+
 public class SimpleAxisRenderer implements AxisRenderer {
 
 	int numDivisions = 5;
@@ -36,6 +38,29 @@ public class SimpleAxisRenderer implements AxisRenderer {
         mAxisTickPaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10, mDisplayMetrics));
         mAxisTickPaint.setAntiAlias(true);
 
+    }
+
+	public SimpleAxisRenderer(GraphView graphview) {
+		mDisplayMetrics = graphview.getContext().getResources().getDisplayMetrics();
+		
+		mAxisLabelPaint.setColor(Color.BLACK);
+		mAxisLabelPaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 15, mDisplayMetrics));
+		mAxisLabelPaint.setAntiAlias(true);
+		
+		mAxisTickPaint.setColor(Color.DKGRAY);
+		mAxisTickPaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10, mDisplayMetrics));
+		mAxisTickPaint.setAntiAlias(true);
+		
+	}
+
+    @Override
+    public void setYAxisLabel(String label){
+        mYAxisLabel = label;
+    }
+
+    @Override
+    public void setXAxisLabel(String label) {
+        mXAxisLabel = label;
     }
 	
 	private float[] mYAxis;

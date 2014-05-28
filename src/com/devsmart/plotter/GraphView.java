@@ -99,6 +99,7 @@ public class GraphView extends View {
 	}
 
     private void init(){
+
         mPanGestureDetector = new GestureDetector(mSimpleGestureListener);
         mScaleGestureDetector = new XYScaleGestureDetector(getContext(), mSimpleScaleGestureListener);
         mDrawPaint.setFilterBitmap(true);
@@ -121,7 +122,10 @@ public class GraphView extends View {
         //mZoomControls.setAutoDismissed(true);
         //mZoomControls.setOnZoomListener(mZoomButtonListener);
     }
-	
+
+    public AxisRenderer getAxisRenderer() {
+        return mAxisRenderer;
+    }
 
 
 	@Override
@@ -296,8 +300,11 @@ public class GraphView extends View {
 	public void setDisplayViewPort(RectF viewport) {
 		mTransformMatrix.reset();
 		mViewPort = new RectF(viewport);
-		mCoordinateSystem.interpolate(mViewPort, new RectF(0,0,mGraphArea.width(), mGraphArea.height()));
-		drawFrame(viewport);
+
+        if(mGraphArea != null) {
+            mCoordinateSystem.interpolate(mViewPort, new RectF(0, 0, mGraphArea.width(), mGraphArea.height()));
+            drawFrame(viewport);
+        }
 	}
 	
 	@Override

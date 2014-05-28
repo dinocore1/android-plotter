@@ -25,4 +25,7 @@ public interface AxisRenderer {
 	 */
 	void drawAxis(Canvas canvas, int canvasWidth, int canvasHeight, RectF viewport, CoordinateSystem coordSystem);
 
+    void setXAxisLabel(String label);
+    void setYAxisLabel(String label);
+
 }
