@@ -27,5 +27,6 @@ public interface AxisRenderer {
 
     void setXAxisLabel(String label);
     void setYAxisLabel(String label);
+    void setAxisColor(int color);
 
 }

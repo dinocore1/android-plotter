@@ -53,6 +53,12 @@ public class SimpleAxisRenderer implements AxisRenderer {
 	}
 
     @Override
+    public void setAxisColor(int color) {
+        mAxisLabelPaint.setColor(color);
+        mAxisTickPaint.setColor(color);
+    }
+
+    @Override
     public void setYAxisLabel(String label){
         mYAxisLabel = label;
     }
