@@ -1,5 +1,6 @@
 package com.devsmart.plotter;
 
+import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
@@ -19,21 +20,21 @@ public class SimpleAxisRenderer implements AxisRenderer {
 	boolean mDrawYAxis = true;
 	int mAxisColor = Color.BLACK;
 	Rect mPlotMargins = new Rect(20, 0, 0, 20);
-	Paint mAxisLabelPaint = new Paint();
-	Paint mAxisTickPaint = new Paint();
+	public Paint mAxisLabelPaint = new Paint();
+	public Paint mAxisTickPaint = new Paint();
 	String mXAxisLabel = "Wavelength";
 	String mYAxisLabel = "Intensity";
 	
 	DisplayMetrics mDisplayMetrics;
+	
+	public SimpleAxisRenderer(Context context) {
+		mDisplayMetrics = context.getResources().getDisplayMetrics();
 
-    public SimpleAxisRenderer(GraphView graphview,int axisColor, int lableColor) {
-        mDisplayMetrics = graphview.getContext().getResources().getDisplayMetrics();
-
-        mAxisLabelPaint.setColor(axisColor/*Color.BLACK*/);
+        mAxisLabelPaint.setColor(Color.BLACK);
         mAxisLabelPaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 15, mDisplayMetrics));
         mAxisLabelPaint.setAntiAlias(true);
 
-        mAxisTickPaint.setColor(lableColor/*Color.DKGRAY*/);
+        mAxisTickPaint.setColor(Color.DKGRAY);
         mAxisTickPaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10, mDisplayMetrics));
         mAxisTickPaint.setAntiAlias(true);
 

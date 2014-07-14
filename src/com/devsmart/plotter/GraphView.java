@@ -74,44 +74,32 @@ public class GraphView extends View {
     private RectF mViewPortBounds;
 
 	public GraphView(Context context) {
-		super(context);
-		init();
+        super(context);
+        mAxisRenderer = new SimpleAxisRenderer(getContext());
+        init();
 	}
 
 	public GraphView(Context context, AttributeSet attrs) {
 		super(context, attrs);
+
         TypedArray a = context.getTheme().obtainStyledAttributes(
                 attrs,
                 R.styleable.GraphView,
                 0, 0);
 
-        int axisColor;
-        int labelColor;
-        try {
-             axisColor  = a.getInteger(R.styleable.GraphView_axisColor, Color.BLACK);
-             labelColor  = a.getInteger(R.styleable.GraphView_axisColor, Color.DKGRAY);
-            init(axisColor,labelColor);
-        }catch (Exception e){
-            init();
-        }finally {
-            a.recycle();
-        }
+        SimpleAxisRenderer axisRenderer = new SimpleAxisRenderer(getContext());
 
+        axisRenderer.mAxisTickPaint.setColor(a.getInteger(R.styleable.GraphView_axisColor, Color.BLACK));
+        axisRenderer.mAxisLabelPaint.setColor(a.getInteger(R.styleable.GraphView_axisColor, Color.DKGRAY));
 
+        a.recycle();
+
+        mAxisRenderer = axisRenderer;
+        init();
 	}
 
-	private void init() {
-		mAxisRenderer = new SimpleAxisRenderer(this);
-        setUp();
+    private void init(){
 
-
-	}
-    private void init(int axisColor,int labelColor) {
-        mAxisRenderer = new SimpleAxisRenderer(this,axisColor,labelColor);
-        setUp();
-    }
-
-    private void setUp(){
         mPanGestureDetector = new GestureDetector(mSimpleGestureListener);
         mScaleGestureDetector = new XYScaleGestureDetector(getContext(), mSimpleScaleGestureListener);
         mDrawPaint.setFilterBitmap(true);
@@ -339,15 +327,12 @@ public class GraphView extends View {
 		BackgroundTask.runBackgroundTask(mBackgroundDrawTask, mDrawThread);
 	}
 
-    public static Bitmap drawBitmap(int width, int height, List<DataRenderer> data,
+    public static void drawBitmap(Canvas c, int width, int height, List<DataRenderer> data,
                                     RectF viewport,
                                     CoordinateSystem coordinateSystem) {
 
         CoordinateSystem mCoordCopy = coordinateSystem.copy();
         mCoordCopy.interpolate(viewport, new RectF(0,0,width,height));
-
-        Bitmap drawBuffer = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_4444);
-        Canvas c = new Canvas(drawBuffer);
 
         try {
             c.save();
@@ -360,7 +345,6 @@ public class GraphView extends View {
         }finally {
             c.restore();
         }
-        return drawBuffer;
     }
 
 	private class BackgroundDrawTask extends BackgroundTask {
