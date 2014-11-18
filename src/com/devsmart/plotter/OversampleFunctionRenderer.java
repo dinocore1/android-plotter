@@ -117,8 +117,8 @@ public class OversampleFunctionRenderer implements DataRenderer {
 
         Path p = new Path();
 
-        points[0] = viewPort.left;
-        points[1] = (float) mFunction.value(viewPort.left);
+        points[0] = (float) mSamplePoints[0];
+        points[1] = (float) mFunction.value(mSamplePoints[0]);
         coordSystem.mapPoints(points);
         p.moveTo(points[0], points[1]);
 
