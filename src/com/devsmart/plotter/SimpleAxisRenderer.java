@@ -205,7 +205,7 @@ public class SimpleAxisRenderer implements AxisRenderer {
 	}
 	
 	protected String getTickLabel(float value) {
-		return String.format("%3.1f", value);
+		return String.format("%g", value);
 		//return String.valueOf(MathUtils.round(value, 1));
 	}
 
