@@ -6,6 +6,8 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
 
+import java.util.Arrays;
+
 public class OversampleFunctionRenderer implements DataRenderer {
 
     private static class MinMax {
@@ -38,7 +40,9 @@ public class OversampleFunctionRenderer implements DataRenderer {
 
     public OversampleFunctionRenderer(FunctionRenderer2.GraphFunction f, double[] samplePoints, int color) {
         mFunction = f;
-        mSamplePoints = samplePoints;
+        mSamplePoints = new double[samplePoints.length];
+        System.arraycopy(samplePoints, 0, mSamplePoints, 0, mSamplePoints.length);
+        Arrays.sort(mSamplePoints);
         mPaint.setColor(color);
         mPaint.setStrokeWidth(2.0f);
         mPaint.setAntiAlias(true);
@@ -112,17 +116,32 @@ public class OversampleFunctionRenderer implements DataRenderer {
         float[] points = new float[2];
         final double pixelWidth = viewPort.width() / (double)canvas.getWidth();
 
-        mMinMax.clear();
-        double lastX = viewPort.left-pixelWidth;
+        int start = Arrays.binarySearch(mSamplePoints, viewPort.left);
+        if(start < 0) {
+            start = -start - 2;
+        }
+        if(start < 0){
+            start = 0;
+        }
+
+        int end = Arrays.binarySearch(mSamplePoints, viewPort.right);
+        if(end < 0) {
+            end = -end;
+        }
+        if(end >= mSamplePoints.length) {
+            end = mSamplePoints.length;
+        }
 
         Path p = new Path();
+        mMinMax.clear();
 
-        points[0] = (float) mSamplePoints[0];
-        points[1] = (float) mFunction.value(mSamplePoints[0]);
+        double lastX = mSamplePoints[start];
+        points[0] = (float) lastX;
+        points[1] = (float) mFunction.value(lastX);
         coordSystem.mapPoints(points);
         p.moveTo(points[0], points[1]);
 
-        for(int i=0;i<mSamplePoints.length;i++){
+        for(int i=start+1;i<end;i++){
             double x = mSamplePoints[i];
             final double y = mFunction.value(x);
             mMinMax.addValue(y);
