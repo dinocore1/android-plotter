@@ -22,7 +22,7 @@ import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
 import android.widget.ZoomButtonsController;
 
-import com.devsmart.BackgroundTask;
+import com.devsmart.android.BackgroundTask;
 
 import java.util.ArrayList;
 import java.util.Iterator;

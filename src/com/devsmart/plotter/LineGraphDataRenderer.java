@@ -1,7 +1,6 @@
 package com.devsmart.plotter;
 
 import android.graphics.Canvas;
-import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.RectF;
 
