@@ -8,7 +8,7 @@ import android.graphics.RectF;
 public class PointRenderer implements DataRenderer {
 
     private float[] mPoints;
-    private Paint mPaint = new Paint();
+    private final Paint mPaint = new Paint();
 
     public PointRenderer(float[] points, int color) {
         mPoints = points;
@@ -31,5 +31,11 @@ public class PointRenderer implements DataRenderer {
                 canvas.drawCircle(point[0], point[1], 2.0f, mPaint);
             }
         }
+    }
+
+    @Override
+    public void setPaintColor(int color)
+    {
+        mPaint.setColor(color);
     }
 }

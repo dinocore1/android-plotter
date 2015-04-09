@@ -8,7 +8,7 @@ import com.devsmart.PeekableIterator;
 
 public class LineGraphDataRenderer implements DataRenderer {
 
-	protected Paint mPointPaint = new Paint();
+	protected final Paint mPointPaint = new Paint();
 	protected Series mSeries;
 
 	public LineGraphDataRenderer(Series series, int color) {
@@ -70,7 +70,13 @@ public class LineGraphDataRenderer implements DataRenderer {
 			}
 		
 	}
-	
+
+	@Override
+	public void setPaintColor(int color)
+	{
+		mPointPaint.setColor(color);
+	}
+
 	private boolean fillPixelBin(RectF pixelBin, PeekableIterator<float[]> it) {
 		boolean retval = false;
 		float[] point;

@@ -13,7 +13,7 @@ public class FunctionRenderer2 implements DataRenderer {
     }
 
     private final GraphFunction mFunction;
-    protected Paint mPaint = new Paint();
+    protected final Paint mPaint = new Paint();
 
 
     public FunctionRenderer2(GraphFunction f, int color){
@@ -52,5 +52,11 @@ public class FunctionRenderer2 implements DataRenderer {
         }
 
         canvas.drawPath(p, mPaint);
+    }
+
+    @Override
+    public void setPaintColor(int color)
+    {
+        mPaint.setColor(color);
     }
 }
