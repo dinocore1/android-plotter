@@ -27,26 +27,20 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public final class GraphView extends View
-{
-    public static void drawBitmap(Canvas c, int width, int height, List<DataRenderer> data, RectF viewport, CoordinateSystem coordinateSystem)
-    {
+public final class GraphView extends View {
+    public static void drawBitmap(Canvas c, int width, int height, List<DataRenderer> data, RectF viewport, CoordinateSystem coordinateSystem) {
         CoordinateSystem mCoordCopy = coordinateSystem.copy();
         mCoordCopy.interpolate(viewport, new RectF(0, 0, width, height));
 
-        try
-        {
+        try {
             c.save();
             c.scale(1, -1);
             c.translate(0, -c.getHeight());
 
-            for (DataRenderer r : data)
-            {
+            for (DataRenderer r : data) {
                 r.draw(c, viewport, mCoordCopy);
             }
-        }
-        finally
-        {
+        } finally {
             c.restore();
         }
     }
@@ -55,17 +49,14 @@ public final class GraphView extends View
     private static final String KEY_SUPERINSTANCE = "superinstance";
     private static final long mAnimationTime = 1000;
 
-    private final GestureDetector.SimpleOnGestureListener mSimpleGestureListener = new GestureDetector.SimpleOnGestureListener()
-    {
+    private final GestureDetector.SimpleOnGestureListener mSimpleGestureListener = new GestureDetector.SimpleOnGestureListener() {
         @Override
-        public boolean onDown(MotionEvent e)
-        {
+        public boolean onDown(MotionEvent e) {
             return true;
         }
 
         @Override
-        public boolean onDoubleTap(MotionEvent e)
-        {
+        public boolean onDoubleTap(MotionEvent e) {
             mTransformMatrix.postScale(1.3f, 1.3f, e.getX(), e.getY());
             invalidate();
             updateViewport();
@@ -73,8 +64,7 @@ public final class GraphView extends View
         }
 
         @Override
-        public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY)
-        {
+        public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
             mTransformMatrix.postTranslate(-distanceX, -distanceY);
             invalidate();
             updateViewport();
@@ -82,11 +72,9 @@ public final class GraphView extends View
         }
     };
 
-    private final XYScaleGestureDetector.SimpleOnScaleGestureListener mSimpleScaleGestureListener = new XYScaleGestureDetector.SimpleOnScaleGestureListener()
-    {
+    private final XYScaleGestureDetector.SimpleOnScaleGestureListener mSimpleScaleGestureListener = new XYScaleGestureDetector.SimpleOnScaleGestureListener() {
         @Override
-        public boolean onScale(XYScaleGestureDetector detector)
-        {
+        public boolean onScale(XYScaleGestureDetector detector) {
             mTransformMatrix.postScale(detector.getXScaleFactor(), detector.getYScaleFactor(), detector.getFocusX(), detector.getFocusY());
             invalidate();
             updateViewport();
@@ -114,15 +102,13 @@ public final class GraphView extends View
     private RectF mAnimationDest;
     private long mAnimationEndTime = 0;
 
-    public GraphView(Context context)
-    {
+    public GraphView(Context context) {
         super(context);
         mAxisRenderer = new SimpleAxisRenderer(getContext());
         init();
     }
 
-    public GraphView(Context context, AttributeSet attrs)
-    {
+    public GraphView(Context context, AttributeSet attrs) {
         super(context, attrs);
 
         TypedArray a = context.getTheme().obtainStyledAttributes(attrs, R.styleable.GraphView, 0, 0);
@@ -138,8 +124,7 @@ public final class GraphView extends View
     }
 
     @Override
-    protected Parcelable onSaveInstanceState()
-    {
+    protected Parcelable onSaveInstanceState() {
         Bundle retval = new Bundle();
         retval.putParcelable(KEY_SUPERINSTANCE, super.onSaveInstanceState());
 
@@ -154,8 +139,7 @@ public final class GraphView extends View
     }
 
     @Override
-    protected void onRestoreInstanceState(Parcelable state)
-    {
+    protected void onRestoreInstanceState(Parcelable state) {
         Bundle bundle = (Bundle) state;
         super.onRestoreInstanceState(bundle.getParcelable(KEY_SUPERINSTANCE));
 
@@ -168,8 +152,7 @@ public final class GraphView extends View
     }
 
     @Override
-    protected void onSizeChanged(int w, int h, int oldw, int oldh)
-    {
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
 
         mGraphArea = mAxisRenderer.measureGraphArea(w, h);
@@ -179,13 +162,11 @@ public final class GraphView extends View
     }
 
     @Override
-    public boolean onTouchEvent(MotionEvent event)
-    {
+    public boolean onTouchEvent(MotionEvent event) {
         cancelAnimation();
 
         final int action = MotionEventCompat.getActionMasked(event);
-        switch (action)
-        {
+        switch (action) {
             case MotionEvent.ACTION_UP:
                 doBoundsCheck();
                 break;
@@ -198,11 +179,9 @@ public final class GraphView extends View
     }
 
     @Override
-    protected void onDraw(Canvas canvas)
-    {
+    protected void onDraw(Canvas canvas) {
         doAnimation();
-        if (mFrontBuffer != null)
-        {
+        if (mFrontBuffer != null) {
             canvas.save();
             canvas.translate(mGraphArea.left, mGraphArea.top);
             canvas.drawBitmap(mFrontBuffer, mTransformMatrix, mDrawPaint);
@@ -212,57 +191,45 @@ public final class GraphView extends View
         mAxisRenderer.drawAxis(canvas, getMeasuredWidth(), getMeasuredHeight(), getDisplayViewPort(), getCoordinateSystem());
     }
 
-    public AxisRenderer getAxisRenderer()
-    {
+    public AxisRenderer getAxisRenderer() {
         return mAxisRenderer;
     }
 
-    public void addSeries(DataRenderer series)
-    {
+    public void addSeries(DataRenderer series) {
         mPlotData.add(series);
         drawFrame(mViewPort);
     }
 
-    public void removeSeries(DataRenderer series)
-    {
+    public void removeSeries(DataRenderer series) {
         mPlotData.remove(series);
         drawFrame(mViewPort);
     }
 
-    public void setViewportBounds(RectF bounds)
-    {
+    public void setViewportBounds(RectF bounds) {
         mViewPortBounds = bounds;
     }
 
-    public void doBoundsCheck()
-    {
-        if (mViewPortBounds != null)
-        {
+    public void doBoundsCheck() {
+        if (mViewPortBounds != null) {
             RectF newViewport = getDisplayViewPort();
-            if (newViewport.width() > mViewPortBounds.width())
-            {
+            if (newViewport.width() > mViewPortBounds.width()) {
                 newViewport.left = mViewPortBounds.left;
                 newViewport.right = mViewPortBounds.right;
             }
-            if (newViewport.height() > mViewPortBounds.height())
-            {
+            if (newViewport.height() > mViewPortBounds.height()) {
                 newViewport.top = mViewPortBounds.top;
                 newViewport.bottom = mViewPortBounds.bottom;
             }
-            if (newViewport.left < mViewPortBounds.left)
-            {
+            if (newViewport.left < mViewPortBounds.left) {
                 newViewport.offset(mViewPortBounds.left - newViewport.left, 0);
             }
-            if (newViewport.right > mViewPortBounds.right)
-            {
+            if (newViewport.right > mViewPortBounds.right) {
                 newViewport.offset(mViewPortBounds.right - newViewport.right, 0);
             }
-            if (newViewport.bottom > mViewPortBounds.bottom)
-            {
+            if (newViewport.bottom > mViewPortBounds.bottom) {
                 newViewport.offset(0, mViewPortBounds.bottom - newViewport.bottom);
             }
-            if (newViewport.top < mViewPortBounds.top)
-            {
+            if (newViewport.top < mViewPortBounds.top) {
                 newViewport.offset(0, mViewPortBounds.top - newViewport.top);
             }
 
@@ -273,8 +240,7 @@ public final class GraphView extends View
         }
     }
 
-    public RectF getDisplayViewPort()
-    {
+    public RectF getDisplayViewPort() {
         RectF rect = new RectF(0, 0, mGraphArea.width(), mGraphArea.height());
 
         Matrix m = new Matrix();
@@ -288,34 +254,29 @@ public final class GraphView extends View
         return rect;
     }
 
-    public CoordinateSystem getCoordinateSystem()
-    {
+    public CoordinateSystem getCoordinateSystem() {
         CoordinateSystem retval = mCoordinateSystem.copy();
         retval.interpolate(getDisplayViewPort(), new RectF(0, 0, mGraphArea.width(), mGraphArea.height()));
 
         return retval;
     }
 
-    public void setDisplayViewPort(RectF viewport)
-    {
+    public void setDisplayViewPort(RectF viewport) {
         mTransformMatrix.reset();
         mViewPort = new RectF(viewport);
 
-        if (mGraphArea != null)
-        {
+        if (mGraphArea != null) {
             mCoordinateSystem.interpolate(mViewPort, new RectF(0, 0, mGraphArea.width(), mGraphArea.height()));
             drawFrame(viewport);
         }
     }
 
-    public void updateViewport()
-    {
+    public void updateViewport() {
         RectF newViewport = getDisplayViewPort();
         drawFrame(newViewport);
     }
 
-    private void init()
-    {
+    private void init() {
         mPanGestureDetector = new GestureDetector(mSimpleGestureListener);
         mScaleGestureDetector = new XYScaleGestureDetector(getContext(), mSimpleScaleGestureListener);
         mDrawPaint.setFilterBitmap(true);
@@ -329,13 +290,10 @@ public final class GraphView extends View
         mAxisLabelPaint.setAntiAlias(true);
     }
 
-    private void doAnimation()
-    {
-        if (mAnimationInterpolator != null)
-        {
+    private void doAnimation() {
+        if (mAnimationInterpolator != null) {
             long now = System.currentTimeMillis();
-            if (mAnimationEndTime <= now)
-            {
+            if (mAnimationEndTime <= now) {
                 mAnimationInterpolator = null;
                 drawFrame(mAnimationDest);
                 return;
@@ -353,15 +311,12 @@ public final class GraphView extends View
         }
     }
 
-    private void cancelAnimation()
-    {
+    private void cancelAnimation() {
         mAnimationInterpolator = null;
     }
 
-    private void drawFrame(final RectF viewport)
-    {
-        if (mBackgroundDrawTask != null)
-        {
+    private void drawFrame(final RectF viewport) {
+        if (mBackgroundDrawTask != null) {
             mBackgroundDrawTask.mCanceled = true;
         }
 
@@ -369,8 +324,7 @@ public final class GraphView extends View
         BackgroundTask.runBackgroundTask(mBackgroundDrawTask, mDrawThread);
     }
 
-    private final class BackgroundDrawTask extends BackgroundTask
-    {
+    private final class BackgroundDrawTask extends BackgroundTask {
         private int width;
         private int height;
         private Bitmap mDrawBuffer;
@@ -379,11 +333,9 @@ public final class GraphView extends View
         private ArrayList<DataRenderer> mData;
         private CoordinateSystem mCoordCopy;
 
-        public BackgroundDrawTask(RectF view)
-        {
+        public BackgroundDrawTask(RectF view) {
             this.viewport = new RectF(view);
-            if (mCoordinateSystem == null || mGraphArea == null)
-            {
+            if (mCoordinateSystem == null || mGraphArea == null) {
                 mCanceled = true;
                 return;
             }
@@ -397,44 +349,34 @@ public final class GraphView extends View
         }
 
         @Override
-        public void onBackground()
-        {
-            if (!mCanceled)
-            {
+        public void onBackground() {
+            if (!mCanceled) {
                 mDrawBuffer = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_4444);
                 Canvas c = new Canvas(mDrawBuffer);
 
-                try
-                {
+                try {
                     c.save();
                     c.scale(1, -1);
                     c.translate(0, -c.getHeight());
 
-                    for (DataRenderer r : mData)
-                    {
+                    for (DataRenderer r : mData) {
                         r.draw(c, viewport, mCoordCopy);
                     }
-                }
-                finally
-                {
+                } finally {
                     c.restore();
                 }
             }
         }
 
         @Override
-        public void onAfter()
-        {
-            if (!mCanceled)
-            {
+        public void onAfter() {
+            if (!mCanceled) {
                 mFrontBuffer = mDrawBuffer;
                 mViewPort = viewport;
                 mTransformMatrix.reset();
                 mCoordinateSystem = mCoordCopy;
                 invalidate();
-            }
-            else if (mDrawBuffer != null)
-            {
+            } else if (mDrawBuffer != null) {
                 mDrawBuffer.recycle();
             }
             mDrawBuffer = null;

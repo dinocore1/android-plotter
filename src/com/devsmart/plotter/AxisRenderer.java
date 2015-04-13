@@ -4,8 +4,7 @@ import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.graphics.RectF;
 
-public interface AxisRenderer
-{
+public interface AxisRenderer {
     /**
      * Measure the area where the graph data will be drawn. Return a Rect
      * in screen coordinates.

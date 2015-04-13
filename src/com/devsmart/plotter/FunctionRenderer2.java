@@ -1,6 +1,5 @@
 package com.devsmart.plotter;
 
-
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
@@ -16,7 +15,7 @@ public class FunctionRenderer2 implements DataRenderer {
     protected final Paint mPaint = new Paint();
 
 
-    public FunctionRenderer2(GraphFunction f, int color){
+    public FunctionRenderer2(GraphFunction f, int color) {
         mFunction = f;
         mPaint.setColor(color);
         mPaint.setStrokeWidth(2.0f);
@@ -32,17 +31,17 @@ public class FunctionRenderer2 implements DataRenderer {
     public void draw(Canvas canvas, RectF viewPort, CoordinateSystem coordSystem) {
 
         float[] points = new float[2];
-        final double pixelWidth = viewPort.width() / (double)canvas.getWidth();
+        final double pixelWidth = viewPort.width() / (double) canvas.getWidth();
 
         Path p = new Path();
-        for(double x=viewPort.left;x<=viewPort.right;x+=pixelWidth){
+        for (double x = viewPort.left; x <= viewPort.right; x += pixelWidth) {
             final double y = mFunction.value(x);
 
-            points[0] = (float)x;
-            points[1] = (float)y;
+            points[0] = (float) x;
+            points[1] = (float) y;
 
             coordSystem.mapPoints(points);
-            if(isRealNumber(points[0]) && isRealNumber(points[1])) {
+            if (isRealNumber(points[0]) && isRealNumber(points[1])) {
                 if (x == viewPort.left) {
                     p.moveTo(points[0], points[1]);
                 } else {
@@ -55,8 +54,7 @@ public class FunctionRenderer2 implements DataRenderer {
     }
 
     @Override
-    public void setPaintColor(int color)
-    {
+    public void setPaintColor(int color) {
         mPaint.setColor(color);
     }
 }
