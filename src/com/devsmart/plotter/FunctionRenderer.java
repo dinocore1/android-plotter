@@ -7,15 +7,18 @@ import android.graphics.Path;
 import android.graphics.RectF;
 
 public class FunctionRenderer implements DataRenderer {
-
     public interface GraphFunction {
         double value(double x);
     }
 
     private double[] mSampleLocations;
-	private GraphFunction mFunction;
+    private GraphFunction mFunction;
     private double mSampleRate = 2;
-	protected Paint mPointPaint = new Paint();
+    protected final Paint mPointPaint = new Paint();
+    float[] points = new float[6];
+    float[] drawPoints = new float[4];
+    float[] lastPoint = new float[2];
+    double[] yMinMax = new double[2];
 
     public FunctionRenderer(GraphFunction f, double[] sampleLocations, int color) {
         mFunction = f;
@@ -25,44 +28,38 @@ public class FunctionRenderer implements DataRenderer {
         mPointPaint.setAntiAlias(true);
         mPointPaint.setStyle(Paint.Style.STROKE);
     }
-	
-	public FunctionRenderer(GraphFunction f, double samplerate, int color) {
-		mFunction = f;
+
+    public FunctionRenderer(GraphFunction f, double samplerate, int color) {
+        mFunction = f;
         mSampleRate = samplerate;
-		mPointPaint.setColor(color);
-		mPointPaint.setStrokeWidth(2.0f);
+        mPointPaint.setColor(color);
+        mPointPaint.setStrokeWidth(2.0f);
         mPointPaint.setAntiAlias(true);
         mPointPaint.setStyle(Paint.Style.STROKE);
-	}
-
-
-	float[] points = new float[6];
-	float[] drawPoints = new float[4];
-    float[] lastPoint = new float[2];
-    double[] yMinMax = new double[2];
+    }
 
     private void drawFixedSample(Canvas canvas, RectF viewPort, CoordinateSystem coordSystem) {
         //reset min max
         yMinMax[0] = Double.MAX_VALUE;
         yMinMax[1] = Double.MIN_VALUE;
 
-        final double pixelWidth = viewPort.width() / (double)canvas.getWidth();
-        final double stepWidth = Math.min(pixelWidth, 1.0/mSampleRate);
+        final double pixelWidth = viewPort.width() / (double) canvas.getWidth();
+        final double stepWidth = Math.min(pixelWidth, 1.0 / mSampleRate);
 
         Path p = new Path();
 
         points[0] = viewPort.left;
-        points[1] = (float)mFunction.value(viewPort.left);
+        points[1] = (float) mFunction.value(viewPort.left);
         coordSystem.mapPoints(points);
         p.moveTo(points[0], points[1]);
 
         double startPix = viewPort.left;
-        for(double x=startPix;x<viewPort.right;x+=stepWidth) {
+        for (double x = startPix; x < viewPort.right; x += stepWidth) {
             final double y = mFunction.value(x);
             yMinMax[0] = Math.min(yMinMax[0], y);
             yMinMax[1] = Math.max(yMinMax[1], y);
 
-            if(x >= startPix+pixelWidth){
+            if (x >= startPix + pixelWidth) {
 
                 //min
                 points[0] = (float) startPix;
@@ -86,7 +83,7 @@ public class FunctionRenderer implements DataRenderer {
         }
 
         points[0] = viewPort.right;
-        points[1] = (float)mFunction.value(viewPort.right);
+        points[1] = (float) mFunction.value(viewPort.right);
         coordSystem.mapPoints(points);
         p.lineTo(points[0], points[1]);
 
@@ -118,11 +115,11 @@ public class FunctionRenderer implements DataRenderer {
         pointPaint.setColor(Color.RED);
 
         int sampleindex = 0;
-        for(int i=0;i<mSampleLocations.length;i++){
-            if(mSampleLocations[i] >= viewPort.left){
+        for (int i = 0; i < mSampleLocations.length; i++) {
+            if (mSampleLocations[i] >= viewPort.left) {
                 sampleindex = i;
-                if(i>0){
-                    sampleindex = i-1;
+                if (i > 0) {
+                    sampleindex = i - 1;
                 }
                 break;
             }
@@ -134,13 +131,13 @@ public class FunctionRenderer implements DataRenderer {
         MinMax xminmax = new MinMax();
         MinMax yminmax = new MinMax();
 
-        final double pixelWidth = viewPort.width() / (double)canvas.getWidth();
+        final double pixelWidth = viewPort.width() / (double) canvas.getWidth();
 
         Path p = new Path();
         Path p2 = new Path();
 
         points[0] = (float) mSampleLocations[sampleindex];
-        points[1] = (float)mFunction.value(points[0]);
+        points[1] = (float) mFunction.value(points[0]);
         xminmax.add(points[0]);
         yminmax.add(points[1]);
 
@@ -152,13 +149,12 @@ public class FunctionRenderer implements DataRenderer {
 
         double startPix = mSampleLocations[sampleindex];
         double x = 0;
-        while(true){
-            if(sampleindex >= mSampleLocations.length-1 || (x=mSampleLocations[sampleindex++ +1]) > viewPort.right){
+        while (true) {
+            if (sampleindex >= mSampleLocations.length - 1 || (x = mSampleLocations[sampleindex++ + 1]) > viewPort.right) {
                 break;
             }
 
             final double y = mFunction.value(x);
-
 
 
             points[0] = (float) x;
@@ -167,8 +163,8 @@ public class FunctionRenderer implements DataRenderer {
 
             canvas.drawCircle(points[0], points[1], 3.0f, pointPaint);
 
-            p.lineTo((lastPoint[0]+points[0])/2, lastPoint[1]);
-            p.lineTo((lastPoint[0]+points[0])/2, points[1]);
+            p.lineTo((lastPoint[0] + points[0]) / 2, lastPoint[1]);
+            p.lineTo((lastPoint[0] + points[0]) / 2, points[1]);
 
             //p.lineTo(points[0], lastPoint[1]);
             //p.lineTo(points[0], points[1]);
@@ -216,7 +212,7 @@ public class FunctionRenderer implements DataRenderer {
         p.lineTo(canvas.getWidth(), lastPoint[1]);
 
         points[0] = viewPort.right;
-        points[1] = (float)mFunction.value(viewPort.right);
+        points[1] = (float) mFunction.value(viewPort.right);
         xminmax.add(points[0]);
         yminmax.add(points[1]);
         coordSystem.mapPoints(points);
@@ -238,14 +234,14 @@ public class FunctionRenderer implements DataRenderer {
         //reset min max
         yMinMax[0] = Double.MAX_VALUE;
         yMinMax[1] = Double.MIN_VALUE;
-        final double stepWidth = Math.min(pixelWidth, 1.0/mSampleRate);
+        final double stepWidth = Math.min(pixelWidth, 1.0 / mSampleRate);
         startPix = viewPort.left;
-        for(x=startPix;x<viewPort.right;x+=stepWidth) {
+        for (x = startPix; x < viewPort.right; x += stepWidth) {
             final double y = mFunction.value(x);
             yMinMax[0] = Math.min(yMinMax[0], y);
             yMinMax[1] = Math.max(yMinMax[1], y);
 
-            if(x >= startPix+pixelWidth){
+            if (x >= startPix + pixelWidth) {
 
                 //min
                 points[0] = (float) startPix;
@@ -275,18 +271,18 @@ public class FunctionRenderer implements DataRenderer {
         p2Paint.setAntiAlias(true);
         canvas.drawPath(p2, p2Paint);
     }
-	
-	@Override
-	public void draw(Canvas canvas, RectF viewPort, CoordinateSystem coordSystem) {
-        if(mSampleLocations == null) {
+
+    @Override
+    public void draw(Canvas canvas, RectF viewPort, CoordinateSystem coordSystem) {
+        if (mSampleLocations == null) {
             drawFixedSample(canvas, viewPort, coordSystem);
         } else {
             drawAtSampleLocations(canvas, viewPort, coordSystem);
         }
+    }
 
-
-	}
-
-
-
+    @Override
+    public void setPaintColor(int color) {
+        mPointPaint.setColor(color);
+    }
 }
