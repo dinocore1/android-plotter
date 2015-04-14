@@ -7,8 +7,7 @@ import android.graphics.RectF;
 
 import java.util.Arrays;
 
-public final class OversampleFunctionRenderer implements DataRenderer
-{
+public final class OversampleFunctionRenderer implements DataRenderer {
     private final FunctionRenderer2.GraphFunction mFunction;
     private final Paint mPaint = new Paint();
     private final MinMax mMinMax = new MinMax();
@@ -16,8 +15,7 @@ public final class OversampleFunctionRenderer implements DataRenderer
     private double[] mSamplePoints;
     private double mSampleRate;
 
-    public OversampleFunctionRenderer(FunctionRenderer2.GraphFunction f, double[] samplePoints, int color)
-    {
+    public OversampleFunctionRenderer(FunctionRenderer2.GraphFunction f, double[] samplePoints, int color) {
         mFunction = f;
         mSamplePoints = new double[samplePoints.length];
         System.arraycopy(samplePoints, 0, mSamplePoints, 0, mSamplePoints.length);
@@ -26,8 +24,7 @@ public final class OversampleFunctionRenderer implements DataRenderer
         initPaint(color);
     }
 
-    public OversampleFunctionRenderer(FunctionRenderer2.GraphFunction f, double sampleRate, int color)
-    {
+    public OversampleFunctionRenderer(FunctionRenderer2.GraphFunction f, double sampleRate, int color) {
         mFunction = f;
         mSampleRate = sampleRate;
 
@@ -35,34 +32,27 @@ public final class OversampleFunctionRenderer implements DataRenderer
     }
 
     @Override
-    public void draw(Canvas canvas, RectF viewPort, CoordinateSystem coordSystem)
-    {
-        if (mSamplePoints != null)
-        {
+    public void draw(Canvas canvas, RectF viewPort, CoordinateSystem coordSystem) {
+        if (mSamplePoints != null) {
             drawUsingSamplePoints(canvas, viewPort, coordSystem);
-        }
-        else
-        {
+        } else {
             drawUsingSamplerate(canvas, viewPort, coordSystem);
         }
     }
 
     @Override
-    public void setPaintColor(int color)
-    {
+    public void setPaintColor(int color) {
         mPaint.setColor(color);
     }
 
-    private void initPaint(int color)
-    {
+    private void initPaint(int color) {
         mPaint.setColor(color);
         mPaint.setStrokeWidth(2.0f);
         mPaint.setAntiAlias(true);
         mPaint.setStyle(Paint.Style.STROKE);
     }
 
-    private void drawUsingSamplerate(Canvas canvas, RectF viewPort, CoordinateSystem coordSystem)
-    {
+    private void drawUsingSamplerate(Canvas canvas, RectF viewPort, CoordinateSystem coordSystem) {
         float[] points = new float[2];
         final double pixelWidth = viewPort.width() / (double) canvas.getWidth();
 
@@ -76,13 +66,11 @@ public final class OversampleFunctionRenderer implements DataRenderer
         coordSystem.mapPoints(points);
         p.moveTo(points[0], points[1]);
 
-        for (double x = viewPort.left; x <= viewPort.right; x += mSampleRate)
-        {
+        for (double x = viewPort.left; x <= viewPort.right; x += mSampleRate) {
             final double y = mFunction.value(x);
             mMinMax.addValue(y);
 
-            if (x >= lastX + pixelWidth)
-            {
+            if (x >= lastX + pixelWidth) {
                 drawLine(p, (float) x, coordSystem);
                 lastX = x;
                 mMinMax.clear();
@@ -92,48 +80,40 @@ public final class OversampleFunctionRenderer implements DataRenderer
         canvas.drawPath(p, mPaint);
     }
 
-    private void drawLine(Path path, float x, CoordinateSystem coordSystem)
-    {
+    private void drawLine(Path path, float x, CoordinateSystem coordSystem) {
         mPoints[0] = x;
         mPoints[1] = (float) mMinMax.min;
         mPoints[2] = x;
         mPoints[3] = (float) mMinMax.max;
 
         coordSystem.mapPoints(mPoints);
-        if (FunctionRenderer2.isRealNumber(mPoints[0]) && FunctionRenderer2.isRealNumber(mPoints[1]))
-        {
+        if (FunctionRenderer2.isRealNumber(mPoints[0]) && FunctionRenderer2.isRealNumber(mPoints[1])) {
             path.lineTo(mPoints[0], mPoints[1]);
         }
-        if (FunctionRenderer2.isRealNumber(mPoints[2]) && FunctionRenderer2.isRealNumber(mPoints[3]))
-        {
+        if (FunctionRenderer2.isRealNumber(mPoints[2]) && FunctionRenderer2.isRealNumber(mPoints[3])) {
             path.lineTo(mPoints[2], mPoints[3]);
         }
 
         path.moveTo(mPoints[0], mPoints[1]);
     }
 
-    private void drawUsingSamplePoints(Canvas canvas, RectF viewPort, CoordinateSystem coordSystem)
-    {
+    private void drawUsingSamplePoints(Canvas canvas, RectF viewPort, CoordinateSystem coordSystem) {
         float[] points = new float[2];
         final double pixelWidth = viewPort.width() / (double) canvas.getWidth();
 
         int start = Arrays.binarySearch(mSamplePoints, viewPort.left);
-        if (start < 0)
-        {
+        if (start < 0) {
             start = -start - 2;
         }
-        if (start < 0)
-        {
+        if (start < 0) {
             start = 0;
         }
 
         int end = Arrays.binarySearch(mSamplePoints, viewPort.right);
-        if (end < 0)
-        {
+        if (end < 0) {
             end = -end;
         }
-        if (end >= mSamplePoints.length)
-        {
+        if (end >= mSamplePoints.length) {
             end = mSamplePoints.length;
         }
 
@@ -146,14 +126,12 @@ public final class OversampleFunctionRenderer implements DataRenderer
         coordSystem.mapPoints(points);
         p.moveTo(points[0], points[1]);
 
-        for (int i = start + 1; i < end; i++)
-        {
+        for (int i = start + 1; i < end; i++) {
             double x = mSamplePoints[i];
             final double y = mFunction.value(x);
             mMinMax.addValue(y);
 
-            if (x >= lastX + pixelWidth)
-            {
+            if (x >= lastX + pixelWidth) {
                 drawLine(p, (float) x, coordSystem);
                 lastX = x;
                 mMinMax.clear();
@@ -163,26 +141,21 @@ public final class OversampleFunctionRenderer implements DataRenderer
         canvas.drawPath(p, mPaint);
     }
 
-    private static class MinMax
-    {
+    private static class MinMax {
         double min = Double.NaN;
         double max = Double.NaN;
 
-        public void addValue(double value)
-        {
-            if (value < min || Double.isNaN(min))
-            {
+        public void addValue(double value) {
+            if (value < min || Double.isNaN(min)) {
                 min = value;
             }
 
-            if (value > max || Double.isNaN(max))
-            {
+            if (value > max || Double.isNaN(max)) {
                 max = value;
             }
         }
 
-        public void clear()
-        {
+        public void clear() {
             min = Double.NaN;
             max = Double.NaN;
         }
