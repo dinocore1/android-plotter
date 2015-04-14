@@ -34,12 +34,14 @@ public final class LineRenderer implements DataRenderer {
     @Override
     public void draw(Canvas canvas, RectF viewPort, CoordinateSystem coordSystem) {
         float[] point = new float[2];
+        float[] origin = {0, 0};
+        coordSystem.mapPoints(origin);
         for (XYPair xyPair : mLinesFromOriginList) {
-            if (viewPort.contains(xyPair.x, xyPair.y)) {
+            if (viewPort.contains(xyPair.x, 0)) {
                 point[0] = xyPair.x;
                 point[1] = xyPair.y;
                 coordSystem.mapPoints(point);
-                canvas.drawLine(point[0], 0, point[0], point[1], mPaint);
+                canvas.drawLine(point[0], origin[0], point[0], point[1], mPaint);
             }
         }
     }
