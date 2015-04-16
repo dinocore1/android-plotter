@@ -26,7 +26,7 @@ public final class LineRenderer implements DataRenderer {
     public LineRenderer(List<XYPair> linesFromOriginList, int color) {
         mLinesFromOriginList = linesFromOriginList;
         mPaint.setColor(color);
-        mPaint.setStrokeWidth(2.0f);
+        mPaint.setStrokeWidth(1.0f);
         mPaint.setAntiAlias(true);
         mPaint.setStyle(Paint.Style.STROKE);
     }
@@ -40,7 +40,7 @@ public final class LineRenderer implements DataRenderer {
             point[0] = xyPair.x;
             point[1] = xyPair.y;
             coordSystem.mapPoints(point);
-            canvas.drawLine(point[0], origin[0], point[0], point[1], mPaint);
+            canvas.drawLine(point[0], origin[1], point[0], point[1], mPaint);
         }
     }
 
